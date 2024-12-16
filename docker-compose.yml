@@ -30,6 +30,7 @@ services:
       - ./notebooks:/notebooks
       - ./tests:/tests
       - ./products.csv:/products.csv
+      - ./lsX_c2l2_sp.products.yaml:/lsX_c2l2_sp.products.yaml
     restart: always
   checkdb:
     image: schaffdev/port_check:latest

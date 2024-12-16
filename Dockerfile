@@ -23,6 +23,7 @@ RUN apt-get update && \
 
 COPY requirements.txt /conf/
 COPY products.csv /conf/
+COPY lsX_c2l2_sp.products.yaml /conf/
 RUN pip3 install --no-cache-dir --requirement /conf/requirements.txt
 
 WORKDIR /notebooks

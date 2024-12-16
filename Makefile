@@ -25,6 +25,7 @@ init: ## 2. Prepare the database
 
 product: ## 3. Add a product definition for Sentinel-2
 	docker compose exec -T jupyter dc-sync-products /conf/products.csv
+	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml
 
 
 index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')
@@ -38,12 +39,36 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
 		"stac-to-dc \
 			--catalog-href=https://planetarycomputer.microsoft.com/api/stac/v1/ \
 			--collections='io-lulc'" || true
-	# doesnt support multipoligon https://github.com/opendatacube/odc-tools/issues/538
+	# doesn't support multipolygon https://github.com/opendatacube/odc-tools/issues/538
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='nasadem' \
 			--bbox='$(BBOX)'"
+	docker compose exec -T jupyter bash -c \
+        "stac-to-dc \
+            --bbox='$(BBOX)' \
+            --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+            --collections='landsat-c2-l2' \
+            --datetime='1990-06-01/1990-07-01' \
+            --options='query={\"platform\":{\"in\":[\"landsat-4\",\"landsat-5\"]}}' \
+            --rename-product='ls45_c2l2_sp'"
+	docker compose exec -T jupyter bash -c \
+        "stac-to-dc \
+            --bbox='$(BBOX)' \
+            --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+            --collections='landsat-c2-l2' \
+            --datetime='2020-06-01/2020-07-01' \
+            --options='query={\"platform\":{\"in\":[\"landsat-7\"]}}' \
+            --rename-product='ls7_c2l2_sp'"
+	docker compose exec -T jupyter bash -c \
+        "stac-to-dc \
+            --bbox='$(BBOX)' \
+            --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+            --collections='landsat-c2-l2' \
+            --datetime='2024-06-01/2024-07-01' \
+            --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
+            --rename-product='ls89_c2l2_sp'"
 
 down: ## Bring down the system
 	docker compose down
