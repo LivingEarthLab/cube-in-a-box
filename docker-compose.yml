@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   postgres:
     image: kartoza/postgis:13-3.1
