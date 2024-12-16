@@ -8,7 +8,7 @@ services:
     volumes:
       - ./data/pg:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - "5432:5432"
     restart: always
 
   jupyter:
@@ -25,6 +25,7 @@ services:
       - postgres:postgres
     ports:
       - "80:8888"
+      - "8787:8787"
     volumes:
       - ./notebooks:/notebooks
       - ./tests:/tests
