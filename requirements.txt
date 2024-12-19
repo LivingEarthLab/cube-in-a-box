@@ -35,3 +35,9 @@ sat-search
 # for tests
 pytest
 testbook
+
+# for Dask dashboard
+bokeh  # !=3.0.*,>=2.4.2
+
+# for planetary computer
+planetary-computer
