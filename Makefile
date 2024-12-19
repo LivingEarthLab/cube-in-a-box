@@ -18,7 +18,7 @@ setup-prod: up-prod init product index update-explorer ## Run a full production 
 up: ## 1. Bring up your Docker environment
 	docker compose up -d postgres
 	docker compose run checkdb
-	docker compose up -d jupyter
+	docker compose up -d jupyter --remove-orphans
 	docker compose up -d explorer
 
 init: ## 2. Prepare the database
