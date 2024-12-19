@@ -12,13 +12,14 @@ help: ## Print this help
 	@echo
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-10s\033[0m %s\n", $$1, $$2}'
 
-setup: build up init product index ## Run a full local/development setup
-setup-prod: up-prod init product index ## Run a full production setup
+setup: build up init product index update-explorer ## Run a full local/development setup
+setup-prod: up-prod init product index update-explorer ## Run a full production setup
 
 up: ## 1. Bring up your Docker environment
 	docker compose up -d postgres
 	docker compose run checkdb
 	docker compose up -d jupyter
+	docker compose up -d explorer
 
 init: ## 2. Prepare the database
 	docker compose exec -T jupyter datacube -v system init
@@ -69,6 +70,9 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --datetime='2024-06-01/2024-07-01' \
             --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
             --rename-product='ls89_c2l2_sp'"
+
+update-explorer: # Update the Explorer DB
+	docker compose exec -T explorer cubedash-gen --init --all
 
 down: ## Bring down the system
 	docker compose down
