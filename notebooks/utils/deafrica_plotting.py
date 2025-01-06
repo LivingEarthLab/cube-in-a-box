@@ -149,6 +149,9 @@ def rgb(ds,
     
     """
 
+    # Fix KeyError with time format with faceted plot
+    ds['time'] = ds['time'].astype(str)
+    
     # If ax is supplied via kwargs, ignore aspect and size
     if 'ax' in kwargs:
         
