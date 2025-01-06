@@ -111,6 +111,7 @@ def load_ard(dc,
              predicate=None,
              dtype='auto',
              scaling='raw',
+             patch_url=None,
              **kwargs):
 
     '''
@@ -200,7 +201,11 @@ def load_ard(dc,
         their original values to 0-1.  If 'raw' then dataset is returned
         in its native scaling. WARNING: USGS Landsat Collection 2
         surface reflectance values have an offset so normliaed band indices 
-        will return non-sensical results if setting scaling='raw'. 
+        will return non-sensical results if setting scaling='raw'.
+    patch_url: function, optional
+        planetarycomputer sign_url function (needed to access data (not
+        metadata) from planetarycomputer catalog
+        (https://planetarycomputer.microsoft.com/catalog).
     **kwargs :
         A set of keyword arguments to `dc.load` that define the
         spatiotemporal query used to extract data. This typically
@@ -361,11 +366,13 @@ def load_ard(dc,
     ds = dc.load(datasets=dataset_list,
                  measurements=measurements,
                  dask_chunks={} if dask_chunks is None else dask_chunks,
+                 patch_url=patch_url,
                  **kwargs)
    
     if product_type == 'fc':
         ds_fc_pq = dc.load(datasets=dataset_list_fc_pq,
                            dask_chunks={} if dask_chunks is None else dask_chunks,
+                           patch_url=patch_url,
                            **kwargs)
         
     ####################
