@@ -31,6 +31,7 @@ tqdm
 click<8.1.0
 python-dateutil==2.7.5
 sat-search
+netCDF4
 
 # for tests
 pytest
