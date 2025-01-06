@@ -70,6 +70,8 @@ def rgb(ds,
         col_wrap=4,
         size=6,
         aspect=None,
+        nodata_color = 'White',
+        bckg_color = None,
         savefig_path=None,
         savefig_kwargs={},
         **kwargs):
@@ -84,7 +86,7 @@ def rgb(ds,
     This function was designed to work as an easier-to-use wrapper 
     around xarray's `.plot.imshow()` functionality.
     
-    Last modified: February 2020
+    Last modified: January 2025
     
     Parameters
     ----------  
@@ -127,6 +129,8 @@ def rgb(ds,
         gives width of each facet in inches. Defaults to None, which 
         will calculate the aspect based on the x and y dimensions of 
         the input data.
+    nodata_color : nodata matplotlib named color (Defaults to white)
+    bcgk_color: figure background matplotlib named color (transparent by default)
     savefig_path : string, optional
         Path to export image file for the RGB plot. Defaults to None, 
         which does not export an image file.
@@ -250,7 +254,24 @@ def rgb(ds,
             img = da.squeeze(dim=index_dim).plot.imshow(robust=robust,
                                                         **aspect_size_kwarg,
                                                         **kwargs)
-
+            
+    # Set the background color of each facet
+    if hasattr(img, 'axes'):
+        if hasattr(img.axes, 'flatten'):
+            for ax in img.axes.flatten():
+                ax.set_facecolor(nodata_color)
+                if bckg_color is not None:
+                    ax.figure.set_facecolor(bckg_color)
+        else:
+            img.axes.set_facecolor(nodata_color)
+            if bckg_color is not None:
+                img.figure.set_facecolor(bckg_color)
+    else:
+        img.set_array(ds.where(ds[bands[0]] != nodata_value)[bands].transpose().values)
+        img.axes.set_facecolor(nodata_color)
+        if bckg_color is not None:
+            img.figure.set_facecolor(bckg_color)
+    
     # If an export path is provided, save image to file. Individual and 
     # faceted plots have a different API (figure vs fig) so we get around this 
     # using a try statement:
