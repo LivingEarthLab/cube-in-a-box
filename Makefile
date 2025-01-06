@@ -5,7 +5,10 @@
 ## at 'http://localhost' with password 'secretpassword'
 .PHONY: help setup up down clean
 
+# BBOX=<left>,<bottom>,<right>,<top>
 BBOX := 25,20,35,30
+# DATETIME=<start_date>/<end_date> e.g. 2021-06-01/2021-07-01
+DATETIME := 2021-06-01/2021-07-01
 
 help: ## Print this help
 	@grep -E '^##.*$$' $(MAKEFILE_LIST) | cut -c'4-'
@@ -35,7 +38,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-2-l2a' \
-			--datetime='2021-06-01/2021-07-01'"
+			--datetime='$(DATETIME)'"
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
 			--catalog-href=https://planetarycomputer.microsoft.com/api/stac/v1/ \
@@ -51,7 +54,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
             --collections='landsat-c2-l2' \
-            --datetime='1990-06-01/1990-07-01' \
+            --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-4\",\"landsat-5\"]}}' \
             --rename-product='ls45_c2l2_sp'"
 	docker compose exec -T jupyter bash -c \
@@ -59,7 +62,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
             --collections='landsat-c2-l2' \
-            --datetime='2020-06-01/2020-07-01' \
+            --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-7\"]}}' \
             --rename-product='ls7_c2l2_sp'"
 	docker compose exec -T jupyter bash -c \
@@ -67,7 +70,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
             --collections='landsat-c2-l2' \
-            --datetime='2024-06-01/2024-07-01' \
+            --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
             --rename-product='ls89_c2l2_sp'"
 
