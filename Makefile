@@ -8,7 +8,7 @@
 # BBOX=<left>,<bottom>,<right>,<top>
 BBOX := 25,20,35,30
 # DATETIME=<start_date>/<end_date> e.g. 2021-06-01/2021-07-01
-DATETIME := 2021-06-01/2021-07-01
+DATETIME := 2021-12-01/2021-12-31
 
 help: ## Print this help
 	@grep -E '^##.*$$' $(MAKEFILE_LIST) | cut -c'4-'
