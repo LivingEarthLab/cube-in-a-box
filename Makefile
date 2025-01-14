@@ -30,6 +30,7 @@ init: ## 2. Prepare the database
 product: ## 3. Add a product definition for Sentinel-2
 	docker compose exec -T jupyter dc-sync-products /conf/products.csv
 	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml
+	docker compose exec -T jupyter datacube product add /conf/io_lulc_annual_v02.product.yaml
 
 
 index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')
@@ -41,14 +42,15 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
 			--datetime='$(DATETIME)'"
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
+			--bbox='$(BBOX)' \
 			--catalog-href=https://planetarycomputer.microsoft.com/api/stac/v1/ \
-			--collections='io-lulc'" || true
+			--collections='io-lulc-annual-v02'" || true
 	# doesn't support multipolygon https://github.com/opendatacube/odc-tools/issues/538
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
+			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='nasadem' \
-			--bbox='$(BBOX)'"
+			--collections='nasadem'"
 	docker compose exec -T jupyter bash -c \
         "stac-to-dc \
             --bbox='$(BBOX)' \
