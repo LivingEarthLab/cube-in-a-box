@@ -29,13 +29,11 @@ The Cube in a Box is a simple way to run the [Open Data Cube](https://www.openda
 * `bash setup.sh` - This will get your system running and install everything you need.
 * Note that after this step you will either need to logout/login, or run the next step with `sudo`
 
-**If you already have cloned the repo and have `make` , `docker` and `docker-compose` installed. **
+**If you already have cloned the repo and have `make` , `docker` and `docker-compose` installed.**
 
 * Default :`make setup`
-* Switzerland 1 year: `make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-32`
+* Switzerland 1 year: `make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31`
 * Switzerland all years (till end 2025, might take a while (~15' in my case): `make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31`
-
-**
 
 ### 2. Usage:
 
