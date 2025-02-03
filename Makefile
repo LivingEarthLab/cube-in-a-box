@@ -77,6 +77,12 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
             --rename-product='ls89_c2l2_sp'"
+	docker compose exec -T jupyter bash -c \
+		"stac-to-dc \
+			--bbox='$(BBOX)' \
+			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+			--collections='sentinel-1-rtc' \
+			--datetime='$(DATETIME)'"
 
 update-explorer: # Update the Explorer DB
 	docker compose exec -T explorer cubedash-gen --init --all
