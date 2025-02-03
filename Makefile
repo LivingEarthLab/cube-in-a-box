@@ -28,9 +28,11 @@ init: ## 2. Prepare the database
 	docker compose exec -T jupyter datacube -v system init
 
 product: ## 3. Add a product definition for Sentinel-2
-	docker compose exec -T jupyter dc-sync-products /conf/products.csv
-	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml
-	docker compose exec -T jupyter datacube product add /conf/io_lulc_annual_v02.product.yaml
+	docker compose exec -T jupyter sh -c "datacube product add /conf/*.odc-product.yaml"
+# 	docker compose exec -T jupyter datacube product add /conf/*.odc-product.yaml
+# 	docker compose exec -T jupyter dc-sync-products /conf/products.csv
+# 	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml
+# 	docker compose exec -T jupyter datacube product add /conf/io_lulc_annual_v02.product.yaml
 
 
 index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')

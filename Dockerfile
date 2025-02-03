@@ -22,9 +22,10 @@ RUN apt-get update && \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
 
 COPY requirements.txt /conf/
-COPY products.csv /conf/
-COPY lsX_c2l2_sp.products.yaml /conf/
-COPY io_lulc_annual_v02.product.yaml /conf/
+COPY ./products/* /conf/
+# COPY products.csv /conf/
+# COPY lsX_c2l2_sp.products.yaml /conf/
+# COPY io_lulc_annual_v02.product.yaml /conf/
 RUN pip3 install --no-cache-dir --requirement /conf/requirements.txt
 
 WORKDIR /notebooks

@@ -33,9 +33,10 @@ services:
     volumes:
       - ./notebooks:/notebooks
       - ./tests:/tests
-      - ./products.csv:/products.csv
-      - ./lsX_c2l2_sp.products.yaml:/lsX_c2l2_sp.products.yaml
-      - ./io_lulc_annual_v02.product.yaml:/io_lulc_annual_v02.product.yaml
+      - ./products:/products
+      # - ./products.csv:/products.csv
+      # - ./lsX_c2l2_sp.products.yaml:/lsX_c2l2_sp.products.yaml
+      # - ./io_lulc_annual_v02.product.yaml:/io_lulc_annual_v02.product.yaml
     restart: always
   checkdb:
     image: schaffdev/port_check:latest
