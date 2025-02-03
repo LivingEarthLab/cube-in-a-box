@@ -11,7 +11,7 @@ odc-dscache
 odc-cloud[ASYNC]
 odc-ui
 odc-io
-odc-apps-dc-tools
+odc-apps-dc-tools==0.2.18
 dask==2023.10.1
 distributed==2023.10.1
 # Jupyter components.
@@ -42,3 +42,6 @@ bokeh  # !=3.0.*,>=2.4.2
 
 # for planetary computer
 planetary-computer
+
+# fix "KeyError: 'proj:epsg'"
+pystac==1.12.0
