@@ -35,24 +35,32 @@ product: ## 3. Add a product definition for Sentinel-2
 # 	docker compose exec -T jupyter datacube product add /conf/io_lulc_annual_v02.product.yaml
 
 
-index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')
+index: index-parallel  ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')
+index-parallel:
+	bash index-parallel.sh  # new products to be indexed to be added there as well
+index-serie: index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
+             index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
+             index-sentinel-1-rtc
+index-sentinel-2-l2a:
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-2-l2a' \
 			--datetime='$(DATETIME)'"
+index-io-lulc-annual-v02:
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href=https://planetarycomputer.microsoft.com/api/stac/v1/ \
 			--collections='io-lulc-annual-v02'" || true
-	# doesn't support multipolygon https://github.com/opendatacube/odc-tools/issues/538
+index-nasadem:
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='nasadem'"
+index-ls45_c2l2_sp:
 	docker compose exec -T jupyter bash -c \
         "stac-to-dc \
             --bbox='$(BBOX)' \
@@ -61,6 +69,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-4\",\"landsat-5\"]}}' \
             --rename-product='ls45_c2l2_sp'"
+index-ls7_c2l2_sp:
 	docker compose exec -T jupyter bash -c \
         "stac-to-dc \
             --bbox='$(BBOX)' \
@@ -69,6 +78,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-7\"]}}' \
             --rename-product='ls7_c2l2_sp'"
+index-ls89_c2l2_sp:
 	docker compose exec -T jupyter bash -c \
         "stac-to-dc \
             --bbox='$(BBOX)' \
@@ -77,6 +87,7 @@ index: ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
             --rename-product='ls89_c2l2_sp'"
+index-sentinel-1-rtc:
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
