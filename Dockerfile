@@ -5,8 +5,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     TINI_VERSION=v0.19.0
 
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
+# Detect system architecture and download the correct Tini binary
+RUN ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+        amd64) TINI_ARCH="amd64";; \
+        arm64) TINI_ARCH="arm64";; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1;; \
+    esac && \
+    curl -fsSL -o /tini https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-${TINI_ARCH} && \
+    chmod +x /tini
 
 RUN apt-get update && \
     apt-get install -y \
