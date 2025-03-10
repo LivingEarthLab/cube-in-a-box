@@ -1,4 +1,5 @@
-FROM osgeo/gdal:ubuntu-small-3.6.3
+FROM --platform=linux/amd64 osgeo/gdal:ubuntu-small-3.6.3
+# FROM osgeo/gdal:ubuntu-small-3.6.3
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C.UTF-8 \
