@@ -23,6 +23,7 @@ up: ## 1. Bring up your Docker environment
 	docker compose run checkdb
 	docker compose up -d jupyter --remove-orphans
 	docker compose up -d explorer
+# 	docker compose up -d ows
 
 init: ## 2. Prepare the database
 	docker compose exec -T jupyter datacube -v system init
@@ -47,7 +48,10 @@ index-sentinel-2-l2a:
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-2-l2a' \
-			--datetime='$(DATETIME)'"
+			--datetime='$(DATETIME)' \
+			--archive-less-mature"
+			# archive-less-mature option will trigger an ERROR message (which should
+			# be a WARNING), but is needed to get rid of ols versions of a scene
 index-io-lulc-annual-v02:
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \

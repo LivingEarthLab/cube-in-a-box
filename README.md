@@ -42,3 +42,7 @@ The Cube in a Box is a simple way to run the [Open Data Cube](https://www.openda
 - Default Jupyter notebook still available on [http://localhost/tree](http://localhost/tree) using the password `secretpassword`
 
 - Explorer available on [http://localhost:81](http://localhost:81) 
+
+# Specificities
+
+- Sentinel 2 indexation requires `archive-less-mature` option in [Makefile](./Makefile) to keep only the most recent version of a given scene, but will trigger an ERROR message (which should be a WARNING as non-blocking).
