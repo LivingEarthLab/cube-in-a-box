@@ -25,6 +25,8 @@ RUN apt-get update && \
       python3-pip \
       python3-wheel \
       wget \
+      # nodejs \
+      # npm \
     && apt-get autoclean \
     && apt-get autoremove \
     && rm -rf /var/lib/{apt,dpkg,cache,log}
@@ -40,4 +42,12 @@ WORKDIR /notebooks
 
 ENTRYPOINT ["/tini", "--"]
 
-CMD ["jupyter", "lab", "--allow-root", "--ip='0.0.0.0'", "--NotebookApp.token='secretpassword'"]
+CMD ["jupyter", "lab", "--allow-root", "--ip=0.0.0.0", "--NotebookApp.token=''"]
+# CMD ["jupyter", "lab", "--allow-root", "--ip='0.0.0.0'", "--NotebookApp.token='secretpassword'"]
+
+# OWS
+# USER root
+
+# RUN echo "[default]" > /tmp/datacube.conf
+
+# COPY ./datacube-ows/ows_config /env/config/ows_config

@@ -24,7 +24,7 @@ services:
       # - DB_DATABASE=opendatacube
       - AWS_NO_SIGN_REQUEST=true
       - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
-      - CIABPASSWORD=${CIABPASSWORD:-secretpassword}
+      # - CIABPASSWORD=${CIABPASSWORD:-secretpassword}
     links:
       - postgres:postgres
     ports:
@@ -66,3 +66,29 @@ services:
       - "8090:8090"
     depends_on:
       - postgres
+
+  # ows:
+  #   # image: opendatacube/ows
+  #   build:
+  #     context: datacube-ows
+  #     dockerfile: Dockerfile
+  #   volumes:
+  #     - ./datacube-ows/ows_config:/env/config/ows_config
+  #     - ./datacube.conf:/env/config/datacube.conf
+  #   environment:
+  #     # - POSTGRES_DB=opendatacube
+  #     # - POSTGRES_PASSWORD=opendatacubepassword
+  #     # - POSTGRES_USER=opendatacube
+  #     # - POSTGRES_HOST=postgres
+  #     # - POSTGRES_PORT=5432
+  #     - ODC_CONFIG_PATH=/env/config/datacube.conf
+  #     - ODC_DEFAULT_DB_URL=postgresql://opendatacube:opendatacubepassword@postgres:5432/opendatacube
+  #     - ODC_OWSPOSTGIS_DB_URL=postgresql://opendatacubeusername:opendatacubepassword@postgres:5432/odc_postgis
+  #     - ODC_DEFAULT_INDEX_DRIVER=postgis
+  #     - PYTHONPATH=/env/config
+  #     - DATACUBE_OWS_CFG=ows_config.pacific_ows.ows_cfg
+  #     - OWS_CFG_DIR=/env/config/ows_config
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - postgres

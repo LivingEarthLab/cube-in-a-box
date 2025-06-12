@@ -9,7 +9,7 @@ odc-stac
 odc-stats
 odc-dscache
 odc-cloud[ASYNC]
-odc-ui
+odc-ui==0.2.0a0  # to fix widgets issues
 odc-io
 odc-apps-dc-tools==0.2.18
 dask==2023.10.1
@@ -17,7 +17,7 @@ distributed==2023.10.1
 # Jupyter components.
 gdal
 scipy
-jupyter==1.0.0
+# jupyter==1.0.0
 jupyterlab==3.2.0
 ipyleaflet
 folium
@@ -45,3 +45,9 @@ planetary-computer
 
 # fix "KeyError: 'proj:epsg'"
 pystac==1.12.0
+
+rioxarray
+
+jupyterlab_widgets==1.1.1
+ipywidgets==7.7.5
+
