@@ -12,7 +12,8 @@ services:
     restart: always
 
   jupyter:
-    build: .
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20250612
+    # build: .
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
       - ODC_DEFAULT_DB_USERNAME=opendatacube
