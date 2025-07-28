@@ -4,8 +4,8 @@ FROM --platform=linux/amd64 osgeo/gdal:ubuntu-small-3.6.3
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
-    TINI_VERSION=v0.19.0
-
+    TINI_VERSION=v0.19.0 \
+    SHELL=/bin/bash
 # Detect system architecture and download the correct Tini binary
 RUN ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
