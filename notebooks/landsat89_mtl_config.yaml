@@ -1,0 +1,48 @@
+# General information
+mtl_format: .xml
+schema: https://schemas.opendatacube.org/dataset
+geometry_type: Polygon
+description: Landsat Collection 2 Level-2
+file_format: GeoTIFF
+
+# Variable name in mtl file
+created: LEVEL2_PROCESSING_RECORD/DATE_PRODUCT_GENERATED
+datetime: IMAGE_ATTRIBUTES/DATE_ACQUIRED + IMAGE_ATTRIBUTES/SCENE_CENTER_TIME
+eo_cloud_cover: IMAGE_ATTRIBUTES/CLOUD_COVER  # 100
+landsat_cloud_cover_land: IMAGE_ATTRIBUTES/CLOUD_COVER_LAND  # 100
+eo_gsd: PROJECTION_ATTRIBUTES/GRID_CELL_SIZE_REFLECTIVE
+eo_instrument: IMAGE_ATTRIBUTES/SENSOR_ID
+eo_platform: IMAGE_ATTRIBUTES/SPACECRAFT_ID
+eo_sun_azimuth: IMAGE_ATTRIBUTES/SUN_AZIMUTH
+eo_sun_elevation: IMAGE_ATTRIBUTES/SUN_ELEVATION
+landsat_collection_category: PRODUCT_CONTENTS/COLLECTION_CATEGORY
+landsat_collection_number: PRODUCT_CONTENTS/COLLECTION_NUMBER  # string
+landsat_correction: PRODUCT_CONTENTS/PROCESSING_LEVEL
+landsat_scene_id: LEVEL1_PROCESSING_RECORD/LANDSAT_SCENE_ID
+landsat_wrs_path: IMAGE_ATTRIBUTES/WRS_PATH  # string
+landsat_wrs_row: IMAGE_ATTRIBUTES/WRS_ROW  # string with leading 0
+landsat_wrs_type: IMAGE_ATTRIBUTES/WRS_TYPE  # string with leading 0
+sci_doi: PRODUCT_CONTENTS/DIGITAL_OBJECT_IDENTIFIER  # e.g.10.5066/P9OGBGM6
+
+
+# Connect band names with tif suffixes
+bands_dict:
+  coastal: _SR_B1
+  blue: _SR_B2
+  green: _SR_B3
+  red: _SR_B4
+  nir08: _SR_B5
+  swir16: _SR_B6
+  swir22: _SR_B7
+  qa_pixel: _QA_PIXEL
+  qa_radsat: _QA_RADSAT
+  qa_aerosol: _QA_AEROSOL
+  qa: _ST_QA
+  drad: _ST_DRAD
+  emis: _ST_EMIS
+  emsd: _ST_EMSD
+  lwir11: _ST_B10
+  trad: _ST_TRAD
+  urad: _ST_URAD
+  atran: _ST_ATRAN
+  cdist: _ST_CDIST
