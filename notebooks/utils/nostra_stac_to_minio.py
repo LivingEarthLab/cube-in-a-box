@@ -1083,6 +1083,10 @@ def prepare_folders(folders, minio_client, minio_bucket, minio_url, product_name
     Processes a list of folders using a thread pool with a progress bar,
     passing all necessary arguments to the worker function.
     """
+    # Check if YAML file exists
+    if not os.path.exists(yaml_file):
+        raise FileNotFoundError(f"YAML file not found: {yaml_file}")
+    
     print(f"Processing {len(folders)} folders with {max_workers} threads...")
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         with tqdm(total=len(folders), desc="Processing") as pbar:
