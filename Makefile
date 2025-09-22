@@ -23,6 +23,7 @@ up: ## 1. Bring up your Docker environment
 	docker compose run checkdb
 	docker compose up -d jupyter --remove-orphans
 	docker compose up -d explorer
+	docker compose up -d minio
 # 	docker compose up -d ows
 
 init: ## 2. Prepare the database
@@ -30,6 +31,7 @@ init: ## 2. Prepare the database
 
 product: ## 3. Add a product definition for Sentinel-2
 	docker compose exec -T jupyter sh -c "datacube product add /conf/*.odc-product.yaml"
+# 	docker compose exec -T jupyter datacube product add /conf/s1_rtc.odc-product.yaml
 # 	docker compose exec -T jupyter datacube product add /conf/*.odc-product.yaml
 # 	docker compose exec -T jupyter dc-sync-products /conf/products.csv
 # 	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml

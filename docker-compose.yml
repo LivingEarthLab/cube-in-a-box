@@ -12,7 +12,7 @@ services:
     restart: always
 
   jupyter:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20250612
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20250922
     # build: .
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
@@ -26,8 +26,10 @@ services:
       - AWS_NO_SIGN_REQUEST=true
       - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
       # - CIABPASSWORD=${CIABPASSWORD:-secretpassword}
+
     links:
       - postgres:postgres
+      # - minio:minio
     ports:
       - "80:8888"
       - "8787:8787"
@@ -67,6 +69,19 @@ services:
       - "8090:8090"
     depends_on:
       - postgres
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web UI
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+    volumes:
+      - ./minio-data:/data
+    command: server /data --console-address ":9001"
 
   # ows:
   #   # image: opendatacube/ows
