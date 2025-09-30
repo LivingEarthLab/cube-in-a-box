@@ -1,16 +1,13 @@
 import logging
-import sys
-from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
-
 import requests
+import subprocess
 import yaml
 import pandas as pd
 from io import StringIO
-from ipywidgets import Dropdown, Button, VBox, HBox, Output
 from IPython.display import display
-
-import subprocess
+from ipywidgets import Dropdown, Button, VBox, HBox, Output
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Union
 
 # -------- Configuration --------
 KEY_SEPARATOR = " - "
@@ -22,17 +19,21 @@ logger = logging.getLogger(__name__)
 # --------- Helpers ---------
 def read_text_from_source(source: Union[str, Path]) -> str:
     """
-    Read plain text from a local file or URL.
+    Reads text content from a given source (URL or file path).
 
-    Parameters:
-    - source (str | Path): local path or http/https URL
+    This function reads text from either a URL or a local file. 
+    If the source is a URL, it fetches the content using a GET request. 
+    If the source is a file path, it reads the content from the file.
+
+    Args:
+        source (Union[str, Path]): The source of the text. Can be a URL (string) or a file path (string or Path object).
 
     Returns:
-    - str: text content
+        str: The text content read from the source.
 
     Raises:
-    - FileNotFoundError: local file missing
-    - requests.RequestException: network/HTTP errors
+        FileNotFoundError: If the specified file does not exist.
+        requests.exceptions.RequestException: If there is an error fetching the content from the URL.
     """
     src = str(source)
     if src.startswith(("http://", "https://")):
@@ -44,40 +45,21 @@ def read_text_from_source(source: Union[str, Path]) -> str:
         raise FileNotFoundError(f"Local file not found: {p}")
     return p.read_text(encoding="utf-8")
 
-
-def parse_yaml_documents(content: str) -> List[Dict[str, Any]]:
+def _read_csv_product_definitions(csv_path: Union[str, Path]) -> Dict[str, str]:
     """
-    Parse YAML content into a list of dict documents (skips non-dict docs).
+    Reads product definitions from a CSV file.
 
-    Parameters:
-    - content (str): YAML text possibly containing multiple documents separated by '---'
+    This function reads a CSV file and extracts product definitions based on common column name pairs.
+    It attempts to identify the product and definition columns and returns a dictionary mapping product names to their definitions.
+
+    Args:
+        csv_path (Union[str, Path]): The path to the CSV file.
 
     Returns:
-    - list[dict]: parsed YAML documents
+        Dict[str, str]: A dictionary mapping product names to their definitions.
 
     Raises:
-    - ValueError: YAML parsing error
-    """
-    try:
-        return [doc for doc in yaml.safe_load_all(content) if isinstance(doc, dict)]
-    except yaml.YAMLError as e:
-        raise ValueError(f"YAML parse error: {e}") from e
-
-
-def read_csv_product_definitions(csv_path: Union[str, Path]) -> Dict[str, str]:
-    """
-    Read a CSV mapping of product-name -> product-URL.
-    Accepts several common column name variants.
-
-    Parameters:
-    - csv_path (str | Path): path or URL to CSV
-
-    Returns:
-    - dict: {product_name: product_url}
-
-    Raises:
-    - ValueError: CSV missing expected columns or parsing errors
-    - FileNotFoundError / requests.RequestException: if CSV can't be read
+        ValueError: If the CSV file cannot be read or does not contain the expected column pairs.
     """
     text = read_text_from_source(csv_path)
     try:
@@ -101,30 +83,52 @@ def read_csv_product_definitions(csv_path: Union[str, Path]) -> Dict[str, str]:
         "(product,definition), (product_name,product_url), (product,product_url), (name,url)"
     )
 
-
-# --------- Index builder (extracts names from YAML docs) ---------
-def build_product_index(sources_dict: Dict[str, str]) -> Dict[str, Tuple[Union[str, Path], str]]:
+def parse_yaml_documents(content: str) -> List[Dict[str, Any]]:
     """
-    Build an index mapping display_key -> (source, product_name).
+    Parses multiple YAML documents from a single string.
 
-    - Splits multi-document YAML files, using each document's 'name' field.
-    - Ensures unique display keys (adds " (2)" suffix when needed).
+    This function parses a string containing multiple YAML documents and returns a list of dictionaries,
+    filtering out any documents that are not dictionaries.
 
-    Parameters:
-    - sources_dict (dict): {source_key: local_dir_or_csv_url}
+    Args:
+        content (str): The string containing the YAML documents.
 
     Returns:
-    - dict: {display_key: (source_path_or_url, product_name)}
+        List[Dict[str, Any]]: A list of dictionaries representing the parsed YAML documents.
 
     Raises:
-    - FileNotFoundError / ValueError: on missing inputs or parse problems
+        ValueError: If there is an error parsing the YAML content.
+    """
+    try:
+        return [doc for doc in yaml.safe_load_all(content) if isinstance(doc, dict)]
+    except yaml.YAMLError as e:
+        raise ValueError(f"YAML parse error: {e}") from e
+    
+def _build_product_index(sources_dict: Dict[str, str]) -> Dict[str, Tuple[Union[str, Path], str]]:
+    """
+    Builds an index of products from various sources (CSV files and YAML directories).
+
+    This function processes a dictionary of sources, either CSV files containing product URLs or directories
+    containing YAML files, to build an index mapping product names to their source file and name.
+
+    Args:
+        sources_dict (Dict[str, str]): A dictionary where keys are source identifiers and values are either
+            paths to CSV files or paths to directories containing YAML files.
+
+    Returns:
+        Dict[str, Tuple[Union[str, Path], str]]: A dictionary mapping product keys to a tuple containing the
+            source file path (str or Path object) and the product name (str).
+
+    Raises:
+        FileNotFoundError: If a specified directory does not exist or contains no YAML files.
+        ValueError: If no valid products are found in the specified sources.
     """
     index: Dict[str, Tuple[Union[str, Path], str]] = {}
 
     for source_key, source_path in sources_dict.items():
         if isinstance(source_path, str) and source_path.endswith(".csv"):
             # CSV lists product URLs; read mapping then peek each product URL's YAML
-            product_map = read_csv_product_definitions(source_path)
+            product_map = _read_csv_product_definitions(source_path)
             for product_name_hint, product_url in product_map.items():
                 content = read_text_from_source(product_url)
                 docs = parse_yaml_documents(content)
@@ -175,44 +179,23 @@ def build_product_index(sources_dict: Dict[str, str]) -> Dict[str, Tuple[Union[s
         raise ValueError("No valid products found in the specified sources.")
     return index
 
-
-# --------- YAML save utility ---------
-def save_dict_as_yaml(data: Dict[str, Any], output_filepath: Union[str, Path]) -> None:
-    """
-    Save a dictionary as a YAML file (preserving key order).
-
-    Parameters:
-    - data (dict): the product dict to save
-    - output_filepath (str | Path): destination path
-
-    Returns:
-    - None
-    """
-    Path(output_filepath).write_text(
-        yaml.dump(data, sort_keys=False, default_flow_style=False),
-        encoding="utf-8",
-    )
-    print(f"✅ Saved YAML to {output_filepath}")
-
-
-# --------- Widget UI (lazy-load on selection) ---------
 def select_and_save_product(sources_dict: Dict[str, str], output_filepath: str) -> None:
     """
-    Show an interactive dropdown of discovered products (splits multi-doc YAMLs).
-    The chosen document is read and saved only when the user clicks Save.
+    Selects a product from a source dictionary and saves its YAML definition to a file.
 
-    Parameters:
-    - sources_dict (dict): {source_key: local_dir_or_csv_url}
-    - output_filepath (str): destination YAML path
+    This function builds a product index from a dictionary of sources, presents a dropdown menu to select a product,
+    and saves the corresponding YAML definition to the specified output file when a "Save YAML" button is clicked.
 
-    Returns:
-    - None
+    Args:
+        sources_dict (Dict[str, str]): A dictionary where keys are source identifiers and values are either
+            paths to CSV files or paths to directories containing YAML files.
+        output_filepath (str): The path to the output YAML file.
 
-    Notes:
-    - Errors are printed cleanly; enable DEBUG_MODE for tracebacks.
+    Raises:
+        Exception: If there is an error building the product index or saving the YAML file.  (If DEBUG_MODE is False, errors are printed instead of raised.)
     """
     try:
-        product_index = build_product_index(sources_dict)
+        product_index = _build_product_index(sources_dict)
     except Exception as e:
         if DEBUG_MODE:
             raise
@@ -254,15 +237,19 @@ def select_and_save_product(sources_dict: Dict[str, str], output_filepath: str) 
     display(VBox([HBox([dropdown, button]), output]))
 
     
-def parse_product_yaml(filename):
+def parse_product_yaml(filename: str) -> None:
     """
-    Parse a product YAML file and print relevant information.
-    
-    Parameters:
-    - filename: str - Path to the YAML file
-    
-    Returns:
-    - None
+    Parses and displays information from a product YAML file.
+
+    This function reads a YAML file, validates its structure, and prints basic information 
+    about the product, including its name, description, metadata type, and a list of measurements.
+
+    Args:
+        filename (str): The path to the YAML file.
+
+    Prints:
+        Information about the product to the console.
+        Error messages if the file is not found or the YAML is invalid.
     """
     try:
         with open(filename, 'r') as f:
@@ -292,15 +279,17 @@ def parse_product_yaml(filename):
         print(f"Invalid YAML: {e}")
 
 def add_product_via_cli(yaml_file_path: str, update: bool = False) -> bool:
-    """
-    Adds or updates a product in the datacube using the CLI command.
+    """Adds a product via the datacube CLI.
+
+    This function attempts to add a product to the database using the `datacube product add` command.
+    If the product already exists and `update` is True, it attempts to update the product using `datacube product update`.
 
     Args:
-        yaml_file_path (str): Path to the YAML file defining the product.
-        update (bool): If True, updates the product if it already exists. Defaults to False.
+        yaml_file_path (str): The path to the YAML file defining the product.
+        update (bool, optional): Whether to update the product if it already exists. Defaults to False.
 
     Returns:
-        bool: True if the product was added or updated successfully, False otherwise.
+        bool: True if the product was successfully added or updated, False otherwise.
     """
     try:
         # Try to add the product

@@ -1,23 +1,26 @@
-from shapely.geometry import box
+from shapely.geometry import box, Polygon
 from shapely.ops import unary_union
+from typing import Any, Dict, Optional, Tuple
 import random
 
-def get_product_bbox(dc, product, query_params=None, split_size=-1, stability_threshold=2):
-    """
-    Compute the unified bounding box efficiently by processing small batches incrementally
-    until the bounding box stabilizes (stops changing).
-    
+def get_product_bbox(
+    dc: Any,
+    product: str,
+    query_params: Optional[Dict] = None,
+    split_size: int = -1,
+    stability_threshold: int = 2
+) -> Optional[Tuple[float, float, float, float]]:
+    """Calculates the bounding box of a product's datasets.
+    Queries datasets for a given product and calculates their unified bounding box.
+    Optionally splits the dataset list for processing and checks for stability in the bounding box.
     Args:
-        dc: Datacube instance.
-        product (str): Product name (e.g., 'ls8_nbart_geomedian').
-        query_params (dict, optional): Additional query parameters (e.g., time, region).
-        split_size (int, optional): Number of datasets per split. If -1, process all datasets without splitting.
-                                    Defaults to -1.
-        stability_threshold (int, optional): Number of consecutive identical bboxes needed for early termination.
-                                             Defaults to 2.
-    
+        dc: The DataCube object.
+        product (str): The name of the product.
+        query_params (dict, optional): Query parameters to filter datasets. Defaults to None.
+        split_size (int, optional): The size of the splits for processing datasets. -1 means process all at once. Defaults to -1.
+        stability_threshold (int, optional): The number of recent bounding boxes to check for stability. Defaults to 2.
     Returns:
-        shapely.geometry.Polygon: Unified bounding box in WGS84.
+        Optional[Tuple]: The unified bounding box as (minx, miny, maxx, maxy), or None if no bounding box could be created.
     """
     # Query datasets
     dss = list(dc.find_datasets(product=product, **(query_params or {})))
@@ -37,14 +40,14 @@ def get_product_bbox(dc, product, query_params=None, split_size=-1, stability_th
                 bboxes.append(box(*geom.boundingbox))
             except:
                 continue
-        return unary_union(bboxes) if bboxes else None
+        return unary_union(bboxes).bounds if bboxes else None
     
     # Normal splitting approach
     random.shuffle(dss)
     splits = [dss[i:i + split_size] for i in range(0, len(dss), split_size)]
     
     def process_split(datasets):
-        """Process a split of datasets and return unified bbox."""
+        """Process a split of datasets and return unified bbox polygon."""
         bboxes = []
         for ds in datasets:
             try:
@@ -71,6 +74,7 @@ def get_product_bbox(dc, product, query_params=None, split_size=-1, stability_th
         if current_split_bbox is None:
             continue
         
+        # Merge geometries, not bounds
         new_unified_bbox = unary_union([unified_bbox, current_split_bbox])
         bbox_history.append(new_unified_bbox)
         
@@ -78,8 +82,8 @@ def get_product_bbox(dc, product, query_params=None, split_size=-1, stability_th
         if len(bbox_history) >= stability_threshold:
             recent_bboxes = bbox_history[-stability_threshold:]
             if all(bbox.equals(recent_bboxes[0]) for bbox in recent_bboxes):
-                return new_unified_bbox
+                return new_unified_bbox.bounds
         
         unified_bbox = new_unified_bbox
     
-    return unified_bbox
+    return unified_bbox.bounds

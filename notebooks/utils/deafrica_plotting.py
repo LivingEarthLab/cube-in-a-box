@@ -38,6 +38,7 @@ import ipywidgets
 import numpy as np
 import geopandas as gpd
 import matplotlib as mpl
+import matplotlib.colors as mcolors
 import matplotlib.patheffects as PathEffects
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation

@@ -1,35 +1,42 @@
+import time
+from datetime import timedelta
 import fnmatch
 import os
 import socket
 import json
+from concurrent.futures import ThreadPoolExecutor
 from minio import Minio, S3Error
 from minio.deleteobjects import DeleteObject
-from concurrent.futures import ThreadPoolExecutor
+from rasterio.io import MemoryFile
+from typing import Any, Dict, List, Optional
 
-def connect_and_check_endpoint(endpoint, login, password, secure=False):
-    """
-    Connects to a MinIO server endpoint and verifies the connection.
-    
-    Parameters:
-    - endpoint (str): The MinIO server endpoint in the format 'host:port'.
-    - login (str): The access key for authentication.
-    - password (str): The secret key for authentication.
-    - secure (bool, optional): Whether to use HTTPS for the connection. Defaults to False.
-    
+from .nostra_tools import human_readable_bytes
+
+def connect_and_check_endpoint(
+    endpoint: str, 
+    login: str, 
+    password: str, 
+    secure: bool = False
+) -> Optional[Minio]:
+    """Connects to a Minio endpoint and verifies access.
+
+    This function attempts to connect to a Minio server at the given endpoint, 
+    using the provided login credentials. It checks for basic connectivity and 
+    authentication errors.
+
+    Args:
+        endpoint (str): The Minio endpoint in the format 'host:port'. 
+                         Example: 'localhost:9000'
+        login (str): The access key for authentication. 
+                         Example: 'YOUR_ACCESS_KEY'
+        password (str): The secret key for authentication.
+                         Example: 'YOUR_SECRET_KEY'
+        secure (bool, optional): Whether to use secure (HTTPS) connection. 
+                                 Defaults to False.
+
     Returns:
-    - Minio: A Minio client instance if the connection is successful.
-    - None: If the connection fails or authentication is incorrect.
-    
-    This function attempts to establish a connection to the specified MinIO endpoint
-    and performs basic checks to ensure the connection is successful. It handles various
-    error scenarios and provides informative messages about the nature of the failure.
-    
-    Error handling includes:
-    - Host resolution errors
-    - Connection refusal errors
-    - Authentication errors (invalid access key or secret key)
-    - SSL-related errors
-    - Other unexpected errors
+        Optional[Minio]: A Minio client object if the connection and authentication 
+                         are successful, otherwise None.
     """
     host, port = endpoint.split(':')
 
@@ -65,24 +72,22 @@ def connect_and_check_endpoint(endpoint, login, password, secure=False):
         return None
 
 
-def create_bucket(minio_client, bucket_name):
-    """
-    Create bucket if it doesn't exists.
-    
-    Parameters:
-    - minio_client (Minio): An existing Minio client instance.
-    - bucket_name (str): The name of the bucket to check or create.
-    
+def create_bucket(
+    minio_client: Minio, 
+    bucket_name: str
+) -> bool:
+    """Creates a Minio bucket if it doesn't already exist.
+
+    This function checks if a bucket exists and creates it if it doesn't.
+    It prints success or failure messages to the console.
+
+    Args:
+        minio_client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to create. 
+                            Example: 'my-bucket'
+
     Returns:
-    - bool: True if the bucket exists or was created successfully, False otherwise.
-    This function checks if the specified bucket exists in the MinIO server. If the bucket
-    does not exist, it creates it. The function provides informative messages about the
-    success or failure of the operation.
-    
-    Error handling includes:
-    - Bucket existence checks
-    - Bucket creation failures
-    - Other unexpected errors
+        bool: True if the bucket was created or already exists, False otherwise.
     """
     try:
         if not minio_client.bucket_exists(bucket_name):
@@ -96,22 +101,22 @@ def create_bucket(minio_client, bucket_name):
         return False
 
 
-def set_anonymous_download_permissions(minio_client, bucket_name):
-    """
-    Sets anonymous download permissions for a specified bucket in the MinIO server.
-    
-    Parameters:
-    - minio_client (Minio): An existing Minio client instance.
-    - bucket_name (str): The name of the bucket to set permissions for.
-    
+def set_anonymous_download_permissions(
+    minio_client: Minio, 
+    bucket_name: str
+) -> bool:
+    """Sets anonymous download permissions for a Minio bucket.
+
+    This function sets a bucket policy to allow anonymous read access to objects 
+    within the specified bucket.
+
+    Args:
+        minio_client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to configure.
+                            Example: 'public-bucket'
+
     Returns:
-    - bool: True if the permissions were set successfully, False otherwise.
-    This function sets the bucket policy to allow anonymous downloads for the specified
-    bucket. It provides informative messages about the success or failure of the operation.
-    
-    Error handling includes:
-    - Policy setting failures
-    - Other unexpected errors
+        bool: True if the policy was set successfully, False otherwise.
     """
     policy = {
         "Version": "2012-10-17",
@@ -133,8 +138,39 @@ def set_anonymous_download_permissions(minio_client, bucket_name):
         print(f"⚠️ Error setting bucket policy: {e}")
         return False
 
-def upload_file(client, bucket_name, local_file_path, remote_file_path, overwrite=False, complete_missing=False, verbose=False):
-    """ Uploads a single file to a specified path within a MinIO bucket. """
+def upload_file(
+    client: Minio, 
+    bucket_name: str, 
+    local_file_path: str, 
+    remote_file_path: str, 
+    overwrite: bool = False, 
+    complete_missing: bool = False, 
+    verbose: bool = False
+) -> bool:
+    """Uploads a file to a Minio bucket.
+
+    This function uploads a local file to a specified bucket and remote path. 
+    It handles existing files based on the 'overwrite' and 'complete_missing' flags.
+
+    Args:
+        client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to upload to. 
+                            Example: 'my-bucket'
+        local_file_path (str): The path to the local file to upload. 
+                                Example: '/path/to/local/file.txt'
+        remote_file_path (str): The desired path for the file in the bucket.
+                                 Example: 'remote/file.txt'
+        overwrite (bool, optional): Whether to overwrite existing files. 
+                                     Defaults to False.
+        complete_missing (bool, optional): Whether to upload only if the file is missing.
+                                           Defaults to False.
+        verbose (bool, optional): Whether to print verbose output. 
+                                  Defaults to False.
+
+    Returns:
+        bool: True if the file was uploaded successfully or already existed 
+              (and overwrite/complete_missing conditions were met), False otherwise.
+    """
     should_upload = True
     try:
         client.stat_object(bucket_name, remote_file_path)
@@ -163,21 +199,44 @@ def upload_file(client, bucket_name, local_file_path, remote_file_path, overwrit
 
     return True
 
-def upload_directory(client, bucket_name, local_path, remote_path, overwrite=False, complete_missing=False, verbose=False, max_workers=5):
-    """ Recursively uploads a local directory and its contents to a specified path within a MinIO bucket in parallel.
-    
-    Parameters:
-    - client (Minio): An initialized Minio client instance for interacting with the object storage.
-    - bucket_name (str): The name of the destination bucket in the MinIO server.
-    - local_path (str): The local filesystem path of the directory to be uploaded.
-    - remote_path (str): The remote destination prefix (path) inside the bucket.
-    - overwrite (bool, optional): If True, existing remote files will be overwritten. Defaults to False.
-    - complete_missing (bool, optional): If True, only files that do not already exist on the server will be uploaded. Defaults to False.
-    - verbose (bool, optional): If True, prints per-file upload messages. If False, suppresses them. Defaults to False.
-    - max_workers (int, optional): Maximum number of worker threads. Defaults to 5.
-    
+def _upload_wrapper(file_tuple):
+        local_file_path, remote_file_path = file_tuple
+        return upload_file(client, bucket_name, local_file_path, remote_file_path, overwrite, complete_missing, verbose)
+
+def upload_directory(
+    client: Minio, 
+    bucket_name: str, 
+    local_path: str, 
+    remote_path: str, 
+    overwrite: bool = False, 
+    complete_missing: bool = False, 
+    verbose: bool = False, 
+    max_workers: int = 5
+) -> bool:
+    """Uploads a directory to a Minio bucket.
+
+    This function recursively walks through a local directory and uploads all files 
+    to a specified bucket and remote path. It utilizes a thread pool to upload files concurrently.
+
+    Args:
+        client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to upload to. 
+                            Example: 'my-bucket'
+        local_path (str): The path to the local directory to upload. 
+                           Example: '/path/to/local/directory'
+        remote_path (str): The desired path for the directory in the bucket.
+                            Example: 'remote/directory'
+        overwrite (bool, optional): Whether to overwrite existing files. 
+                                     Defaults to False.
+        complete_missing (bool, optional): Whether to upload only if the file is missing.
+                                           Defaults to False.
+        verbose (bool, optional): Whether to print verbose output. 
+                                  Defaults to False.
+        max_workers (int, optional): The maximum number of threads to use for uploading.
+                                      Defaults to 5.
+
     Returns:
-    - bool: True if all files were uploaded successfully or skipped as intended, False if the upload failed or was aborted.
+        bool: True if all files were uploaded successfully, False otherwise.
     """
     files_to_upload = []
 
@@ -192,12 +251,8 @@ def upload_directory(client, bucket_name, local_path, remote_path, overwrite=Fal
         print(f"⚠️ Error walking through directory: {e}")
         return False
 
-    def upload_wrapper(file_tuple):
-        local_file_path, remote_file_path = file_tuple
-        return upload_file(client, bucket_name, local_file_path, remote_file_path, overwrite, complete_missing, verbose)
-
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        results = list(executor.map(upload_wrapper, files_to_upload))
+        results = list(executor.map(_upload_wrapper, files_to_upload))
 
     if all(results):
         print(f"✅ Directory '{local_path}' uploaded successfully.")
@@ -205,168 +260,29 @@ def upload_directory(client, bucket_name, local_path, remote_path, overwrite=Fal
     else:
         print(f"⚠️ Some files failed to upload.")
         return False
+        
+def list_bucket_tree(
+    client: Minio,
+    bucket_name: str,
+    prefix: str = '',
+    max_recursion_level: Optional[int] = None,
+    show_sizes: bool = False
+) -> None:
+    """Lists the contents of a Minio bucket as a tree structure.
 
-# def upload_file(minio_client, bucket_name, file_path, object_name=None, overwrite=False):
-#     """
-#     Uploads a file to a specified bucket in the MinIO server.
-#     Parameters:
-#     - minio_client (Minio): An existing Minio client instance.
-#     - bucket_name (str): The name of the bucket to upload the file to.
-#     - file_path (str): The local path of the file to upload.
-#     - object_name (str, optional): The name to give the object in the bucket. If not provided,
-#       the file's basename will be used.
-#     - overwrite (bool, optional): Whether to overwrite the file if it already exists. Defaults to False.
-#     Returns:
-#     - bool: True if the file was uploaded successfully, False otherwise.
-#     This function uploads a file to the specified bucket in the MinIO server. It provides
-#     informative messages about the success or failure of the operation.
-#     Error handling includes:
-#     - File upload failures
-#     - Existing file conflicts (if overwrite is False)
-#     - Other unexpected errors
-#     """
-#     object_name = object_name or os.path.basename(file_path)
+    This function recursively lists the objects within a specified Minio bucket, 
+    displaying them in a tree-like format. It can optionally show file sizes 
+    and limit the recursion depth.
 
-#     try:
-#         if not overwrite:
-#             try:
-#                 minio_client.stat_object(bucket_name, object_name)
-#                 print(f"⚠️ File '{object_name}' already exists in bucket '{bucket_name}'. Use overwrite=True to replace it.")
-#                 return False
-#             except S3Error:
-#                 pass
-
-#         minio_client.fput_object(bucket_name, object_name, file_path)
-#         print(f"✅ File '{file_path}' uploaded successfully as '{object_name}'.")
-#         return True
-#     except S3Error as e:
-#         print(f"⚠️ Error uploading file: {e}")
-#         return False
-
-
-# def upload_directory(client, bucket_name, local_path, remote_path,
-#                      overwrite=False, complete_missing=False, verbose=False):
-#     """
-#     Recursively uploads a local directory and its contents to a specified path within a MinIO bucket.
-#     Parameters:
-#     - client (Minio): An initialized Minio client instance for interacting with the object storage.
-#     - bucket_name (str): The name of the destination bucket in the MinIO server.
-#     - local_path (str): The local filesystem path of the directory to be uploaded.
-#     - remote_path (str): The remote destination prefix (path) inside the bucket.
-#     - overwrite (bool, optional): If True, existing remote files will be overwritten. Defaults to False.
-#     - complete_missing (bool, optional): If True, only files that do not already exist on the server will be uploaded. Defaults to False.
-#     - verbose (bool, optional): If True, prints per-file upload messages. If False, suppresses them. Defaults to False.
-#     Returns:
-#     - bool: True if all files were uploaded successfully or skipped as intended, False if the upload failed or was aborted.
-#     This function walks through the given local directory and uploads each file to the specified MinIO bucket,
-#     preserving the directory structure. It supports two optional modes:
-#     - 'overwrite': replaces any existing files at the destination.
-#     - 'complete_missing': only uploads files that are not already present.
-#     If neither mode is enabled and an existing file is detected at the destination,
-#     the function halts and informs the user, enforcing safe behavior by default.
-#     Empty directories are skipped by default, as object storage systems like MinIO do not support folder concepts natively.
-#     Error handling includes:
-#     - File existence checks via object metadata.
-#     - Upload errors due to connection issues, permissions, or invalid paths.
-#     - Graceful recovery and logging of individual file failures.
-#     """
-#     try:
-#         for root, _, files in os.walk(local_path):
-#             for file in files:
-#                 local_file_path = os.path.join(root, file)
-#                 relative_path = os.path.relpath(local_file_path, local_path)
-#                 remote_file_path = os.path.join(remote_path, relative_path).replace("\\", "/")
-
-#                 should_upload = True
-#                 try:
-#                     client.stat_object(bucket_name, remote_file_path)
-#                     if not overwrite and not complete_missing:
-#                         print("❌ Some file/folder(s) already exist, set overwrite or complete-missing option to True")
-#                         return False
-#                     elif complete_missing:
-#                         should_upload = False
-#                 except S3Error as e:
-#                     if e.code in ('NoSuchKey', 'NoSuchObject'):
-#                         should_upload = True
-#                     elif e.code == 'NoSuchBucket':
-#                         raise
-#                     else:
-#                         print(f"⚠️ Error checking existence of '{remote_file_path}': {e}")
-#                         return False
-
-#                 if should_upload or overwrite:
-#                     try:
-#                         client.fput_object(bucket_name, remote_file_path, local_file_path)
-#                         if verbose:
-#                             print(f"✅ File '{local_file_path}' uploaded to '{remote_file_path}'.")
-#                     except S3Error as e:
-#                         print(f"⚠️ Error uploading file '{local_file_path}': {e}")
-#                         return False
-
-#         print(f"✅ Directory '{local_path}' uploaded successfully.")
-#         return True
-#     except S3Error as e:
-#         print(f"⚠️ Error uploading directory: {e}")
-#         return False
-
-def format_size(size_bytes):
-    """
-    Convert bytes to human readable format.
-    
-    Parameters:
-    - size_bytes (int): Size in bytes to convert.
-    
-    Returns:
-    - str: Human readable size string (e.g., "1.5 GB", "256 MB").
-    
-    This function converts byte values into appropriate units using 1024 as the base.
-    Supports conversion up to petabytes with appropriate decimal precision.
-    """
-    if size_bytes == 0:
-        return "0 B"
-    
-    size_units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-    size = float(size_bytes)
-    unit_index = 0
-    
-    while size >= 1024.0 and unit_index < len(size_units) - 1:
-        size /= 1024.0
-        unit_index += 1
-    
-    if unit_index == 0:
-        return f"{int(size)} {size_units[unit_index]}"
-    else:
-        return f"{size:.1f} {size_units[unit_index]}"
-
-def list_bucket_tree(client, bucket_name, prefix='', max_recursion_level=None, show_sizes=False):
-    """
-    Lists the contents of a MinIO bucket in a tree-like format with optional size display.
-    
-    Parameters:
-    - client (Minio): An initialized Minio client instance.
-    - bucket_name (str): The name of the bucket to list.
-    - prefix (str, optional): The prefix to filter objects by. Defaults to ''.
-    - max_recursion_level (int, optional): Maximum recursion level. Defaults to None (no limit).
-    - show_sizes (bool, optional): Whether to display file and folder sizes. Defaults to False.
-    
-    Returns:
-    - None: The function prints the tree structure directly.
-    
-    This function retrieves all objects from the specified MinIO bucket and displays them
-    in a hierarchical tree structure. When show_sizes is enabled, it calculates and displays
-    human-readable file sizes and cumulative folder sizes.
-    
-    Features include:
-    - Tree-like visual representation with Unicode box drawing characters
-    - Optional prefix filtering for specific subdirectories
-    - Configurable recursion depth limiting
-    - File and folder size display with automatic unit conversion
-    - Cumulative folder size calculation
-    
-    Error handling includes:
-    - S3/MinIO connection and access errors
-    - Bucket existence validation
-    - Object listing failures
+    Args:
+        client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to list.
+                            Example: 'my-bucket'
+        prefix (str, optional): A prefix to filter objects by. Defaults to ''.
+        max_recursion_level (int, optional): The maximum recursion depth to display. 
+                                              Defaults to None (no limit).
+        show_sizes (bool, optional): Whether to display file and folder sizes. 
+                                     Defaults to False.
     """
     try:
         objects = client.list_objects(bucket_name, prefix=prefix, recursive=True)
@@ -427,9 +343,9 @@ def list_bucket_tree(client, bucket_name, prefix='', max_recursion_level=None, s
                 size_display = ''
                 if show_sizes:
                     if is_file and full_path in file_sizes:
-                        size_display = f' ({format_size(file_sizes[full_path])})'
+                        size_display = f' ({human_readable_bytes(file_sizes[full_path])})'
                     elif not is_file and full_path in folder_sizes:
-                        size_display = f' ({format_size(folder_sizes[full_path])})'
+                        size_display = f' ({human_readable_bytes(folder_sizes[full_path])})'
                 
                 connector = '└── ' if is_last_item else '├── '
                 print(indent + connector + key + size_display)
@@ -447,23 +363,80 @@ def list_bucket_tree(client, bucket_name, prefix='', max_recursion_level=None, s
     except S3Error as e:
         print(f"⚠️ Error listing bucket contents: {e}")
 
-def empty_bucket(client, bucket_name, pattern="*", verbose=False):
-    """
-    Deletes objects from a specified MinIO bucket using a wildcard pattern.
+def _glob_to_regex(glob_pattern):
+        pattern = glob_pattern.strip('/')
+        pattern = re.escape(pattern)
+        pattern = pattern.replace(r'\*\*', '.*')
+        pattern = pattern.replace(r'\*', '[^/]+')
+        return re.compile(pattern)
+        
+def list_last_level_folders(
+    client: Minio,
+    bucket_name: str,
+    prefix: str = '',
+    filter_pattern: Optional[str] = None
+) -> list[str]:
+    """Lists the last-level folders within a Minio bucket.
 
-    Parameters:
-    - client (Minio): An initialized Minio client instance.
-    - bucket_name (str): The name of the bucket to empty.
-    - pattern (str, optional): A wildcard pattern (e.g., 'data/*.json', 'temp/*')
-      to filter objects for deletion. Defaults to '*', which deletes all objects.
-    - verbose (bool, optional): If True, prints status messages for each deleted object.
-      Defaults to False.
+    This function retrieves a list of folders that are directly containing objects 
+    within a specified Minio bucket and prefix. It can optionally filter the folders 
+    based on a glob pattern.
+
+    Args:
+        client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to list.
+                            Example: 'my-bucket'
+        prefix (str, optional): A prefix to filter objects by. Defaults to ''.
+        filter_pattern (str, optional): A glob pattern to filter folders. 
+                                         Defaults to None.
 
     Returns:
-    - bool: True if the operation was successful, False otherwise.
+        list[str]: A sorted list of last-level folder names.
+    """
+    try:
+        objects = client.list_objects(bucket_name, prefix=prefix, recursive=True)
+        last_level_folders = set()
 
-    This function uses a combination of server-side prefix filtering and client-side
-    wildcard matching for efficiency and flexibility.
+        for obj in objects:
+            path_parts = obj.object_name.strip('/').split('/')
+            if len(path_parts) > 1:
+                parent_folder = '/'.join(path_parts[:-1])
+                last_level_folders.add(parent_folder)
+
+        if filter_pattern:
+            regex = _glob_to_regex(filter_pattern)
+            last_level_folders = {p for p in last_level_folders if regex.search(p)}
+
+        return sorted(last_level_folders)
+
+    except S3Error as e:
+        print(f"⚠️ Error listing bucket contents: {e}")
+        return []
+        
+def empty_bucket(
+    client: Minio,
+    bucket_name: str,
+    pattern: str = "*",
+    verbose: bool = False
+) -> bool:
+    """Empties a Minio bucket based on a wildcard pattern.
+
+    This function deletes all objects within a specified Minio bucket that match 
+    a given wildcard pattern. It uses server-side filtering to minimize the number 
+    of objects fetched.
+
+    Args:
+        client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to empty.
+                            Example: 'my-bucket'
+        pattern (str, optional): A wildcard pattern to match objects for deletion. 
+                                  Defaults to '*' (delete all objects).
+        verbose (bool, optional): Whether to print verbose output about deleted objects.
+                                  Defaults to False.
+
+    Returns:
+        bool: True if the operation completed successfully (or no objects were found), 
+              False otherwise.
     """
     try:
         # Determine the initial prefix for server-side filtering from the pattern
@@ -500,23 +473,21 @@ def empty_bucket(client, bucket_name, pattern="*", verbose=False):
         print(f"⚠️ Error during deletion from bucket '{bucket_name}': {e}")
         return False
 
-def delete_bucket(client, bucket_name):
-    """
-    Deletes a specified bucket from the MinIO server.
-    
-    Parameters:
-    - client (Minio): An initialized Minio client instance.
-    - bucket_name (str): The name of the bucket to be deleted.
-    
+def delete_bucket(
+    client: Minio,
+    bucket_name: str
+) -> bool:
+    """Deletes a Minio bucket.
+
+    This function deletes the specified Minio bucket.
+
+    Args:
+        client (Minio): The Minio client object.
+        bucket_name (str): The name of the bucket to delete.
+                            Example: 'my-bucket'
+
     Returns:
-    - bool: True if the bucket was deleted successfully, False if an error occurred.
-    This function attempts to delete a bucket from the MinIO server. 
-    The bucket must be empty before deletion, or the operation will fail.
-    Error handling includes:
-    - Attempting to delete non-empty buckets
-    - Bucket not found
-    - Permission errors
-    - Network issues
+        bool: True if the bucket was deleted successfully, False otherwise.
     """
     try:
         client.remove_bucket(bucket_name)
@@ -525,3 +496,108 @@ def delete_bucket(client, bucket_name):
     except S3Error as e:
         print(f"⚠️ Error deleting bucket '{bucket_name}': {e}")
         return False
+
+def list_minio_files(
+    minio_client: Minio,
+    minio_bucket: str,
+    folder: str,
+    valid_exts: tuple = (".tif", ".tiff"),
+    notvalid_exts: tuple = (".yaml"),
+    recursive: bool = True
+) -> tuple[List[str], List[str]]:
+    """Lists files in a Minio bucket based on extensions.
+
+    This function lists files within a specified Minio bucket and folder, 
+    categorizing them based on their file extensions into 'images' and 'others'.
+
+    Args:
+        minio_client (Minio): The Minio client object.
+        minio_bucket (str): The name of the bucket to list.
+                             Example: 'my-bucket'
+        folder (str): The prefix (folder) within the bucket to list files from.
+                      Example: 'images/'
+        valid_exts (tuple, optional): A tuple of valid file extensions for images. 
+                                      Defaults to (".tif", ".tiff").
+        notvalid_exts (tuple, optional): A tuple of extensions to exclude. 
+                                         Defaults to (".yaml").
+        recursive (bool, optional): Whether to list files recursively. 
+                                     Defaults to True.
+
+    Returns:
+        tuple[List[str], List[str]]: A tuple containing two lists: 
+                                      the first list contains paths to image files, 
+                                      and the second list contains paths to other files.
+    """
+    images = []
+    others = []
+    for obj in minio_client.list_objects(minio_bucket, prefix=folder, recursive=recursive):
+        if obj.object_name.lower().endswith(valid_exts):
+            images.append(obj.object_name)
+        elif not obj.object_name.lower().endswith(notvalid_exts):
+            others.append(obj.object_name)
+            
+    return images, others
+            
+def describe_minio_image(
+    minio_client: Minio,
+    minio_bucket: str,
+    image_path: str
+) -> Dict[str, Any]:
+    """Describes the geospatial properties of an image in Minio.
+
+    This function retrieves an image from a Minio bucket and extracts its geospatial 
+    properties, such as bounds, CRS, polygon coordinates, transform, and shape.
+
+    Args:
+        minio_client (Minio): The Minio client object.
+        minio_bucket (str): The name of the bucket containing the image.
+                             Example: 'my-bucket'
+        image_path (str): The path to the image within the bucket.
+                           Example: 'images/my_image.tif'
+
+    Returns:
+        Dict[str, Any]: A dictionary containing the extracted geospatial properties:
+                          'epsg_code' (int or None), 'polygon' (list of coordinates), 
+                          'transform' (transform object), 'shape' (tuple of width and height).
+    """
+    try:
+        response = minio_client.get_object(minio_bucket, image_path)
+        with MemoryFile(response.read()) as memfile:
+            with memfile.open() as img:
+                # Get bounds and CRS
+                left, bottom, right, top = img.bounds
+                crs = img.crs
+
+                # # Spatial reference (WKT)
+                # spatial_reference = str(getattr(img, 'crs_wkt', None) or crs.wkt)
+
+                # EPSG code (if available)
+                epsg_code = None
+                if crs and crs.is_epsg_code:
+                    epsg_code = int(crs.to_epsg())
+
+                # Polygon corners (closed loop: ul -> ur -> lr -> ll -> ul)
+                polygon = [
+                    [left, top],     # ul
+                    [right, top],    # ur
+                    [right, bottom], # lr
+                    [left, bottom],  # ll
+                    [left, top]      # ul (close the polygon)
+                ]
+
+                # Transform object
+                transform = img.transform
+
+                # Shape (width, height)
+                shape = (img.width, img.height)
+
+                return {
+                    # 'spatial_reference': spatial_reference,
+                    'epsg_code': epsg_code,
+                    'polygon': polygon,
+                    'transform': transform,
+                    'shape': shape
+                }
+    finally:
+        response.close()
+        response.release_conn()  
