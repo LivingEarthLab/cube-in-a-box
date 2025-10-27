@@ -6,7 +6,7 @@ services:
       - POSTGRES_PASSWORD=opendatacubepassword
       - POSTGRES_USER=opendatacube
     volumes:
-      - ./data/pg:/var/lib/postgresql/data
+      - ./data/pg:/var/lib/postgresql/17/main
     ports:
       - "5432:5432"
     restart: always
