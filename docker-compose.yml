@@ -1,56 +1,98 @@
+name: cube-in-a-box
+
 services:
+  traefik:
+    image: traefik:v3.5
+    container_name: ${COMPOSE_PROJECT_NAME}-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8081:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: always
+    networks:
+      - traefik
+
   postgres:
-    image: kartoza/postgis:17-3.5  # 16-3.4  # 13-3.1
+    image: kartoza/postgis:17-3.5
+    container_name: ${COMPOSE_PROJECT_NAME}-postgres
     environment:
       - POSTGRES_DB=opendatacube
       - POSTGRES_PASSWORD=opendatacubepassword
       - POSTGRES_USER=opendatacube
     volumes:
       - ./data/pg:/var/lib/postgresql/17/main
-    ports:
-      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opendatacube -d opendatacube -h localhost -p 5432 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
     restart: always
+    networks:
+      - backend
 
   jupyter:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20250922
-    # build: .
+    container_name: ${COMPOSE_PROJECT_NAME}-jupyter
+    build: .
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
       - ODC_DEFAULT_DB_USERNAME=opendatacube
       - ODC_DEFAULT_DB_PASSWORD=opendatacubepassword
       - ODC_DEFAULT_DB_DATABASE=opendatacube
-      # - DB_HOSTNAME=postgres
-      # - DB_USERNAME=opendatacube
-      # - DB_PASSWORD=opendatacubepassword
-      # - DB_DATABASE=opendatacube
       - AWS_NO_SIGN_REQUEST=true
       - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
-      # - CIABPASSWORD=${CIABPASSWORD:-secretpassword}
-
-    links:
-      - postgres:postgres
-      # - minio:minio
-    ports:
-      - "80:8888"
-      - "8787:8787"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./notebooks:/notebooks
       - ./tests:/tests
       - ./products:/products
-      # - ./products.csv:/products.csv
-      # - ./lsX_c2l2_sp.products.yaml:/lsX_c2l2_sp.products.yaml
-      # - ./io_lulc_annual_v02.product.yaml:/io_lulc_annual_v02.product.yaml
+    command:
+      - bash
+      - -lc
+      - >
+        jupyter lab
+        --ServerApp.trust_xheaders=True
+        --ServerApp.allow_remote_access=True
+        --ServerApp.allow_origin='*'
+        --allow-root
+        --ip=0.0.0.0
+        --NotebookApp.token=''
     restart: always
+    networks:
+      - traefik
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jupyter.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.jupyter.entrypoints=web"
+      - "traefik.http.routers.jupyter.priority=100"
+      - "traefik.http.routers.jupyter.service=jupyter"
+      - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
+      - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
+
   checkdb:
     image: schaffdev/port_check:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-checkdb
     environment:
       - CHECK_HOST=postgres
       - CHECK_PORT=5432
-    links:
-      - postgres:postgres
+    depends_on:
+      - postgres
+    networks:
+      - backend
 
   explorer:
-    # image: opendatacube/explorer
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20251028
+    container_name: ${COMPOSE_PROJECT_NAME}-explorer
     build:
       context: datacube-explorer
       dockerfile: Dockerfile
@@ -64,47 +106,60 @@ services:
       - FLASK_APP=cubedash
       - FLASK_DEBUG=1
       - CUBEDASH_DEFAULT_TIMEZONE=Europe/Zurich
-    ports:
-      - "81:8080"
-      - "8090:8090"
+      - SCRIPT_NAME=/explorer
+      - CUBEDASH_BASE_URL=/explorer
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    restart: always
+    networks:
+      - traefik
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.explorer.rule=Host(`${DOMAIN}`) && PathPrefix(`/explorer`)"
+      - "traefik.http.routers.explorer.entrypoints=web"
+      - "traefik.http.routers.explorer.priority=100"
+      - "traefik.http.routers.explorer.service=explorer"
+      - "traefik.http.services.explorer.loadbalancer.server.port=8080"
+      - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
   minio:
     image: minio/minio
-    container_name: minio
-    ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # Web UI
+    container_name: ${COMPOSE_PROJECT_NAME}-minio
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: admin123
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=admin123
+      - MINIO_BROWSER_REDIRECT_URL=http://minio-console.${DOMAIN}
+      - MINIO_SERVER_URL=http://minio.${DOMAIN}
     volumes:
       - ./minio-data:/data
     command: server /data --console-address ":9001"
+    restart: always
+    # extra_hosts:
+    #   - "minio.${DOMAIN}:host-gateway"
+    #   - "minio-console.${DOMAIN}:host-gateway"
+    networks:
+      - traefik
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.minio-api.rule=Host(`minio.${DOMAIN}`)"
+      - "traefik.http.routers.minio-api.entrypoints=web"
+      - "traefik.http.routers.minio-api.priority=100"
+      - "traefik.http.routers.minio-api.service=minio-api"
+      - "traefik.http.services.minio-api.loadbalancer.server.port=9000"
+      - "traefik.http.routers.minio-console.rule=Host(`minio-console.${DOMAIN}`)"
+      - "traefik.http.routers.minio-console.entrypoints=web"
+      - "traefik.http.routers.minio-console.priority=100"
+      - "traefik.http.routers.minio-console.service=minio-console"
+      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+      - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
-  # ows:
-  #   # image: opendatacube/ows
-  #   build:
-  #     context: datacube-ows
-  #     dockerfile: Dockerfile
-  #   volumes:
-  #     - ./datacube-ows/ows_config:/env/config/ows_config
-  #     - ./datacube.conf:/env/config/datacube.conf
-  #   environment:
-  #     # - POSTGRES_DB=opendatacube
-  #     # - POSTGRES_PASSWORD=opendatacubepassword
-  #     # - POSTGRES_USER=opendatacube
-  #     # - POSTGRES_HOST=postgres
-  #     # - POSTGRES_PORT=5432
-  #     - ODC_CONFIG_PATH=/env/config/datacube.conf
-  #     - ODC_DEFAULT_DB_URL=postgresql://opendatacube:opendatacubepassword@postgres:5432/opendatacube
-  #     - ODC_OWSPOSTGIS_DB_URL=postgresql://opendatacubeusername:opendatacubepassword@postgres:5432/odc_postgis
-  #     - ODC_DEFAULT_INDEX_DRIVER=postgis
-  #     - PYTHONPATH=/env/config
-  #     - DATACUBE_OWS_CFG=ows_config.pacific_ows.ows_cfg
-  #     - OWS_CFG_DIR=/env/config/ows_config
-  #   ports:
-  #     - "8000:8000"
-  #   depends_on:
-  #     - postgres
+networks:
+  traefik:
+    name: ${COMPOSE_PROJECT_NAME}-traefik
+    driver: bridge
+  backend:
+    name: ${COMPOSE_PROJECT_NAME}-backend
+    driver: bridge
