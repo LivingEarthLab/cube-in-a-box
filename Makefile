@@ -19,12 +19,12 @@ setup: build up init product index update-explorer ## Run a full local/developme
 setup-prod: up-prod init product index update-explorer ## Run a full production setup
 
 up: ## 1. Bring up your Docker environment
+	docker compose up -d traefik
 	docker compose up -d postgres
 	docker compose run checkdb
 	docker compose up -d jupyter --remove-orphans
 	docker compose up -d explorer
 	docker compose up -d minio
-# 	docker compose up -d ows
 
 init: ## 2. Prepare the database
 	docker compose exec -T jupyter datacube -v system init
@@ -108,7 +108,7 @@ down: ## Bring down the system
 	docker compose down
 
 build: ## Rebuild the base image
-	docker compose pull
+	docker compose pull --ignore-pull-failures
 	docker compose build
 
 shell: ## Start an interactive shell

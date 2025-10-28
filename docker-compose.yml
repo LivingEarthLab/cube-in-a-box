@@ -72,7 +72,7 @@ services:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.jupyter.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.jupyter.rule=Host(`jupyter.${DOMAIN}`)"
       - "traefik.http.routers.jupyter.entrypoints=web"
       - "traefik.http.routers.jupyter.priority=100"
       - "traefik.http.routers.jupyter.service=jupyter"
@@ -106,8 +106,6 @@ services:
       - FLASK_APP=cubedash
       - FLASK_DEBUG=1
       - CUBEDASH_DEFAULT_TIMEZONE=Europe/Zurich
-      - SCRIPT_NAME=/explorer
-      - CUBEDASH_BASE_URL=/explorer
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,7 +115,7 @@ services:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.explorer.rule=Host(`${DOMAIN}`) && PathPrefix(`/explorer`)"
+      - "traefik.http.routers.explorer.rule=Host(`explorer.${DOMAIN}`)"
       - "traefik.http.routers.explorer.entrypoints=web"
       - "traefik.http.routers.explorer.priority=100"
       - "traefik.http.routers.explorer.service=explorer"
@@ -131,14 +129,11 @@ services:
       - MINIO_ROOT_USER=admin
       - MINIO_ROOT_PASSWORD=admin123
       - MINIO_BROWSER_REDIRECT_URL=http://minio-console.${DOMAIN}
-      - MINIO_SERVER_URL=http://minio.${DOMAIN}
+      - MINIO_SERVER_URL=http://minio:9000
     volumes:
       - ./minio-data:/data
     command: server /data --console-address ":9001"
     restart: always
-    # extra_hosts:
-    #   - "minio.${DOMAIN}:host-gateway"
-    #   - "minio-console.${DOMAIN}:host-gateway"
     networks:
       - traefik
       - backend
