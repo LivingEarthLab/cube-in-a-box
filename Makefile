@@ -116,6 +116,8 @@ shell: ## Start an interactive shell
 
 clean: ## Delete everything
 	docker compose down --rmi all -v
+	docker run --rm -v ./data/pg:/data/pg alpine sh -c "rm -rf /data/pg/*" || true
+	docker rmi alpine || true
 
 logs: ## Show the logs from the stack
 	docker compose logs --follow

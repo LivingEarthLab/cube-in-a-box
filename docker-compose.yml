@@ -36,9 +36,11 @@ services:
     restart: always
     networks:
       - backend
+    ports:
+      - 5432:5432
 
   jupyter:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20250922
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20251028
     container_name: ${COMPOSE_PROJECT_NAME}-jupyter
     build: .
     environment:
@@ -79,6 +81,12 @@ services:
       - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
+      # - "traefik.http.routers.dask.rule=Host(`dask.${DOMAIN}`)"
+      # - "traefik.http.routers.dask.entrypoints=web"
+      # - "traefik.http.routers.dask.priority=100"
+      # - "traefik.http.routers.dask.service=dask"
+      # - "traefik.http.services.dask.loadbalancer.server.port=8787"
+
   checkdb:
     image: schaffdev/port_check:latest
     container_name: ${COMPOSE_PROJECT_NAME}-checkdb
@@ -113,6 +121,8 @@ services:
     networks:
       - traefik
       - backend
+    ports:
+      - 81:81
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.explorer.rule=Host(`explorer.${DOMAIN}`)"
