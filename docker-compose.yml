@@ -50,6 +50,8 @@ services:
       - ODC_DEFAULT_DB_DATABASE=opendatacube
       - AWS_NO_SIGN_REQUEST=true
       - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
+      - BOKEH_RESOURCES=inline
+      - DASK_DISTRIBUTED__DASHBOARD__LINK=/jupyter/proxy/{port}/status
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,16 +59,19 @@ services:
       - ./notebooks:/notebooks
       - ./tests:/tests
       - ./products:/products
+      - ./distributed.yaml:/etc/dask/distributed.yaml
     command:
       - bash
       - -lc
       - >
         jupyter lab
+        --ServerApp.base_url=/jupyter
         --ServerApp.trust_xheaders=True
         --ServerApp.allow_remote_access=True
         --ServerApp.allow_origin='*'
         --allow-root
         --ip=0.0.0.0
+        --NotebookApp.base_url='/jupyter'
         --NotebookApp.token=''
     restart: always
     networks:
@@ -74,18 +79,12 @@ services:
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.jupyter.rule=Host(`jupyter.${DOMAIN}`)"
+      - "traefik.http.routers.jupyter.rule=Host(`${DOMAIN}`) && PathPrefix(`/jupyter`)"
       - "traefik.http.routers.jupyter.entrypoints=web"
       - "traefik.http.routers.jupyter.priority=100"
       - "traefik.http.routers.jupyter.service=jupyter"
       - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
-
-      # - "traefik.http.routers.dask.rule=Host(`dask.${DOMAIN}`)"
-      # - "traefik.http.routers.dask.entrypoints=web"
-      # - "traefik.http.routers.dask.priority=100"
-      # - "traefik.http.routers.dask.service=dask"
-      # - "traefik.http.services.dask.loadbalancer.server.port=8787"
 
   checkdb:
     image: schaffdev/port_check:latest
@@ -114,6 +113,8 @@ services:
       - FLASK_APP=cubedash
       - FLASK_DEBUG=1
       - CUBEDASH_DEFAULT_TIMEZONE=Europe/Zurich
+      - SCRIPT_NAME=/explorer
+      - CUBEDASH_BASE_URL=/explorer
     depends_on:
       postgres:
         condition: service_healthy
@@ -125,45 +126,106 @@ services:
       - 81:81
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.explorer.rule=Host(`explorer.${DOMAIN}`)"
+      - "traefik.http.routers.explorer.rule=Host(`${DOMAIN}`) && PathPrefix(`/explorer`)"
       - "traefik.http.routers.explorer.entrypoints=web"
       - "traefik.http.routers.explorer.priority=100"
       - "traefik.http.routers.explorer.service=explorer"
       - "traefik.http.services.explorer.loadbalancer.server.port=8080"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
-  minio:
-    image: minio/minio
-    container_name: ${COMPOSE_PROJECT_NAME}-minio
-    environment:
-      - MINIO_ROOT_USER=admin
-      - MINIO_ROOT_PASSWORD=admin123
-      - MINIO_BROWSER_REDIRECT_URL=http://minio-console.${DOMAIN}
-      - MINIO_SERVER_URL=http://minio:9000
-    volumes:
-      - ./minio-data:/data
-    command: server /data --console-address ":9001"
+  # minio:
+  #   image: minio/minio
+  #   container_name: ${COMPOSE_PROJECT_NAME}-minio
+  #   environment:
+  #     - MINIO_ROOT_USER=admin
+  #     - MINIO_ROOT_PASSWORD=admin123
+  #     - MINIO_BROWSER_REDIRECT_URL=http://minio-console.${DOMAIN}
+  #     - MINIO_SERVER_URL=http://minio:9000
+  #   volumes:
+  #     - ./minio-data:/data
+  #   command: server /data --console-address ":9001"
+  #   restart: always
+  #   networks:
+  #     - traefik
+  #     - backend
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.minio-api.rule=Host(`minio.${DOMAIN}`)"
+  #     - "traefik.http.routers.minio-api.entrypoints=web"
+  #     - "traefik.http.routers.minio-api.priority=100"
+  #     - "traefik.http.routers.minio-api.service=minio-api"
+  #     - "traefik.http.services.minio-api.loadbalancer.server.port=9000"
+  #     - "traefik.http.routers.minio-console.rule=Host(`minio-console.${DOMAIN}`)"
+  #     - "traefik.http.routers.minio-console.entrypoints=web"
+  #     - "traefik.http.routers.minio-console.priority=100"
+  #     - "traefik.http.routers.minio-console.service=minio-console"
+  #     - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+  #     - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
+
+# SeaweedFS single-node stack
+  master:
+    image: chrislusf/seaweedfs:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-s3-master
+    command: "master -ip=master -ip.bind=0.0.0.0"
     restart: always
     networks:
+      - s3
+
+  volume:
+    image: chrislusf/seaweedfs:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-s3-volume
+    command: 'volume -mserver="master:9333" -ip.bind=0.0.0.0 -dir=/data'
+    volumes:
+      - ./s3-data:/data
+    restart: always
+    depends_on:
+      - master
+    networks:
+      - s3
+
+  filer:
+    image: chrislusf/seaweedfs:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-s3-filter
+    command: 'filer -master="master:9333" -ip.bind=0.0.0.0 -iam'
+    restart: always
+    depends_on:
+      - master
+      - volume
+    networks:
+      - s3
+
+  s3:
+    image: chrislusf/seaweedfs:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-s3
+    command: 's3 -filer="filer:8888" -ip.bind=0.0.0.0'
+    restart: always
+    environment:
+      - AWS_ACCESS_KEY_ID=acces-key-123
+      - AWS_SECRET_ACCESS_KEY=secret-key-123
+    depends_on:
+      - master
+      - volume
+      - filer
+    networks:
       - traefik
-      - backend
+      - s3
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.minio-api.rule=Host(`minio.${DOMAIN}`)"
-      - "traefik.http.routers.minio-api.entrypoints=web"
-      - "traefik.http.routers.minio-api.priority=100"
-      - "traefik.http.routers.minio-api.service=minio-api"
-      - "traefik.http.services.minio-api.loadbalancer.server.port=9000"
-      - "traefik.http.routers.minio-console.rule=Host(`minio-console.${DOMAIN}`)"
-      - "traefik.http.routers.minio-console.entrypoints=web"
-      - "traefik.http.routers.minio-console.priority=100"
-      - "traefik.http.routers.minio-console.service=minio-console"
-      - "traefik.http.services.minio-console.loadbalancer.server.port=9001"
+      - "traefik.http.routers.s3.rule=Host(`${DOMAIN}`) && PathPrefix(`/s3`)"
+      - "traefik.http.routers.s3.entrypoints=web"
+      - "traefik.http.routers.s3.priority=100"
+      - "traefik.http.routers.s3.service=s3"
+      - "traefik.http.middlewares.s3-stripprefix.stripprefix.prefixes=/s3"
+      - "traefik.http.routers.s3.middlewares=s3-stripprefix"
+      - "traefik.http.services.s3.loadbalancer.server.port=8333"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
 networks:
   traefik:
     name: ${COMPOSE_PROJECT_NAME}-traefik
+    driver: bridge
+  s3:
+    name: ${COMPOSE_PROJECT_NAME}-s3
     driver: bridge
   backend:
     name: ${COMPOSE_PROJECT_NAME}-backend
