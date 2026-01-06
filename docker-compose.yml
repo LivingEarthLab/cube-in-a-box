@@ -2,7 +2,7 @@ name: cube-in-a-box
 
 services:
   traefik:
-    image: traefik:v3.5
+    image: traefik:v3.6
     container_name: ${COMPOSE_PROJECT_NAME}-traefik
     command:
       - "--api.insecure=true"
@@ -15,7 +15,7 @@ services:
       - "8081:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    restart: always
+    restart: unless-stopped
     networks:
       - traefik
 
@@ -33,7 +33,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    restart: always
+    restart: unless-stopped
     networks:
       - backend
     ports:
@@ -73,7 +73,7 @@ services:
         --ip=0.0.0.0
         --NotebookApp.base_url='/jupyter'
         --NotebookApp.token=''
-    restart: always
+    restart: unless-stopped
     networks:
       - traefik
       - backend
