@@ -36,8 +36,6 @@ services:
     restart: unless-stopped
     networks:
       - backend
-    ports:
-      - 5432:5432
 
   jupyter:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20251028
@@ -59,6 +57,7 @@ services:
       - ./notebooks:/notebooks
       - ./tests:/tests
       - ./products:/products
+      - ./data/ingested_data:/ingested_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
     command:
       - bash
@@ -118,12 +117,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ./data/ingested_data:/ingested_data
     restart: unless-stopped
     networks:
       - traefik
       - backend
-    ports:
-      - 81:81
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.explorer.rule=Host(`${DOMAIN}`) && PathPrefix(`/explorer`)"

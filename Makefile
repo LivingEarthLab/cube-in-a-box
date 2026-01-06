@@ -24,7 +24,6 @@ up: ## 1. Bring up your Docker environment
 	docker compose run checkdb
 	docker compose up -d jupyter --remove-orphans
 	docker compose up -d explorer
-	docker compose up -d minio
 
 init: ## 2. Prepare the database
 	docker compose exec -T jupyter datacube -v system init
