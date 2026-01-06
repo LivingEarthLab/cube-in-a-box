@@ -57,7 +57,7 @@ services:
       - ./notebooks:/notebooks
       - ./tests:/tests
       - ./products:/products
-      - ./data/ingested_data:/ingested_data
+      - ./data/local_data:/local_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
     command:
       - bash
@@ -118,7 +118,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./data/ingested_data:/ingested_data
+      - ./data/local_data:/local_data
     restart: unless-stopped
     networks:
       - traefik
