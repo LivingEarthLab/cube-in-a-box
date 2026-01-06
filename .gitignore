@@ -17,6 +17,4 @@ notebooks/.local/
 notebooks/.bash_history
 notebooks/.python_history
 .env
-minio-data
-s3-data
 __pycache__
