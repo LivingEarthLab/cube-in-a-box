@@ -68,8 +68,10 @@ services:
         --ServerApp.trust_xheaders=True
         --ServerApp.allow_remote_access=True
         --ServerApp.allow_origin='*'
+        --ServerApp.token=''
         --allow-root
         --ip=0.0.0.0
+        --port=8888
         --no-browser
     restart: unless-stopped
     networks:
