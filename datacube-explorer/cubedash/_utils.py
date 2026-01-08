@@ -2,6 +2,8 @@
 Common global filters and util methods.
 """
 
+from __future__ import annotations
+
 import csv
 import difflib
 import functools
@@ -9,50 +11,41 @@ import io
 import itertools
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from datetime import datetime, timedelta, timezone
+from datetime import tzinfo as e_tzinfo
 from io import StringIO
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
-from uuid import UUID
 
-import datacube.drivers.postgres._schema
 import eodatasets3.serialise
 import flask
-import numpy as np
 import shapely.geometry
 import shapely.validation
 import structlog
 from affine import Affine
 from datacube import utils as dc_utils
-from datacube.drivers.postgres import _api as pgapi
-from datacube.drivers.postgres._fields import PgDocField
-from datacube.index import Index
 from datacube.index.eo3 import is_doc_eo3
 from datacube.index.fields import Field
-from datacube.model import Dataset, DatasetType, MetadataType, Range
-from datacube.utils import geometry, jsonify_document
-from datacube.utils.geometry import CRS
-from dateutil import tz
-from dateutil.relativedelta import relativedelta
+from datacube.model import Dataset, MetadataType, Product, Range
+from datacube.utils import InvalidDocException, jsonify_document
 from eodatasets3 import serialise
 from flask_themer import render_template
-from orjson import orjson
+from odc.geo import Geometry, geom
+from odc.geo.crs import CRS
+from orjson.orjson import OPT_INDENT_2, dumps
 from pyproj import CRS as PJCRS
 from ruamel.yaml.comments import CommentedMap
 from shapely.geometry import Polygon, shape
-from sqlalchemy import func, select
-from sqlalchemy.engine import Engine
+from sqlalchemy import TIMESTAMP, func
 from werkzeug.datastructures import MultiDict
 
 from planetary_computer import sign
 
-_TARGET_CRS = "EPSG:4326"
+if TYPE_CHECKING:
+    from cubedash._model import ProductWithSummary
 
-DEFAULT_PLATFORM_END_DATE = {
-    "LANDSAT_8": datetime.now() - relativedelta(months=2),
-    "LANDSAT_7": datetime.now() - relativedelta(months=2),
-    "LANDSAT_5": datetime(2011, 11, 30),
-}
+_TARGET_CRS = "EPSG:4326"
 
 NEAR_ANTIMERIDIAN = shape(
     {
@@ -68,10 +61,10 @@ DEFAULT_CRS_INFERENCES = [
 ]
 MATCH_CUTOFF = 0.38
 
-_LOG = structlog.get_logger()
+_LOG = structlog.stdlib.get_logger()
 
 
-def infer_crs(crs_str: str) -> Optional[str]:
+def infer_crs(crs_str: str) -> str | None:
     plausible_list = [
         code
         for code in DEFAULT_CRS_INFERENCES
@@ -86,11 +79,7 @@ def infer_crs(crs_str: str) -> Optional[str]:
             ).get_matching_blocks()
         )
 
-    sorted_closest_wkt = sorted(
-        plausible_list,
-        key=chars_in_common,
-        reverse=False,
-    )
+    sorted_closest_wkt = sorted(plausible_list, key=chars_in_common, reverse=False)
 
     if len(sorted_closest_wkt) == 0:
         return None
@@ -107,16 +96,46 @@ def expects_eo3_metadata_type(md: MetadataType) -> bool:
     """
     Does the given metadata type expect EO3 datasets?
     """
-    # We don't have a clean way to say that a product expects EO3
-
-    measurements_offset = md.definition["dataset"].get("measurements")
-
-    # In EO3, the measurements are in ['measurments'],
-    # In EO1, they are in ['image', 'bands'].
-    return measurements_offset == ["measurements"]
+    try:
+        MetadataType.validate_eo3(md.definition)
+        return True
+    except InvalidDocException:
+        return False
 
 
-def get_dataset_file_offsets(dataset: Dataset) -> Dict[str, str]:
+def jsonb_doc_expression(md: MetadataType):
+    return md.dataset_fields["metadata_doc"].alchemy_expression  # type: ignore[attr-defined]
+
+
+def datetime_expression(md_type: MetadataType):
+    """
+    Get an Alchemy expression for a timestamp of datasets of the given metadata type.
+    There is another function sharing the same logic but is for flask template
+    in file: _utils.py function datetime_from_metadata
+    """
+    # If EO3+Stac formats, there's already has a plain 'datetime' field,
+    # So we can use it directly.
+    if expects_eo3_metadata_type(md_type):
+        props = jsonb_doc_expression(md_type)["properties"]
+
+        # .... but in newer Stac, datetime is optional.
+        # .... in which case we fall back to the start time.
+        #      (which I think makes more sense in large ranges than a calculated center time)
+        return (
+            func.coalesce(props["datetime"].astext, props["dtr:start_datetime"].astext)
+            .cast(TIMESTAMP(timezone=True))
+            .label("center_time")
+        )
+
+    # On older EO datasets, there's only a time range, so we take the center time.
+    # (This matches the logic in ODC's Dataset.center_time)
+    time = md_type.dataset_fields["time"].alchemy_expression  # type: ignore[attr-defined]
+    return (func.lower(time) + (func.upper(time) - func.lower(time)) / 2).label(
+        "center_time"
+    )
+
+
+def get_dataset_file_offsets(dataset: Dataset) -> dict[str, str]:
     """
     Get (usually relative) paths for all known files of a dataset.
 
@@ -134,29 +153,31 @@ def get_dataset_file_offsets(dataset: Dataset) -> Dict[str, str]:
         uri_list.update({name: a.path for name, a in dataset_doc.accessories.items()})
 
     # sign paths if provider is planetarycomputer
-    if dataset.metadata_doc['accessories']['tilejson']['path'].startswith('https://planetarycomputer.microsoft.com/api/data'):
+    if dataset.metadata_doc["accessories"]["tilejson"]["path"].startswith(
+        "https://planetarycomputer.microsoft.com/api/data"
+    ):
         k, v = list(uri_list.items())[0]
-        signed_postfix = sign(v).replace(v,'')
+        signed_postfix = sign(v).replace(v, "")
         for k, v in uri_list.items():
             uri_list[k] = v + signed_postfix
 
     return uri_list
 
 
-def as_resolved_remote_url(location: str, offset: str) -> str:
+def as_resolved_remote_url(location: str | None, offset: str) -> str:
     """
     Convert a dataset location and file offset to a full remote URL.
     """
     return as_external_url(
-        urljoin(location, offset),
-        (flask.current_app.config.get("CUBEDASH_DATA_S3_REGION", "ap-southeast-2")),
+        urljoin(location or "", offset),
+        flask.current_app.config.get("CUBEDASH_DATA_S3_REGION", "ap-southeast-2"),
         location is None,
     )
 
 
 def as_external_url(
-    url: str, s3_region: str = None, is_base: bool = False
-) -> Optional[str]:
+    url: str, s3_region: str | None = None, is_base: bool = False
+) -> str:
     """
     Convert a URL to an externally-visible one.
 
@@ -165,8 +186,8 @@ def as_external_url(
     >>> as_external_url('s3://some-data/L2/S2A_OPER_MSI_ARD__A030100_T56LNQ_N02.09/ARD-METADATA.yaml', "ap-southeast-2")
     'https://some-data.s3.ap-southeast-2.amazonaws.com/L2/S2A_OPER_MSI_ARD__A030100_T56LNQ_N02.09/ARD-METADATA.yaml'
     >>> # Other URLs are left as-is
-    >>> unconvertable_url = 'file:///g/data/xu18/ga_ls8c_ard_3-1-0_095073_2019-03-22_final.odc-metadata.yaml'
-    >>> unconvertable_url == as_external_url(unconvertable_url)
+    >>> unconvertible_url = 'file:///g/data/xu18/ga_ls8c_ard_3-1-0_095073_2019-03-22_final.odc-metadata.yaml'
+    >>> unconvertible_url == as_external_url(unconvertible_url)
     True
     >>> as_external_url('some/relative/path.txt')
     'some/relative/path.txt'
@@ -200,7 +221,7 @@ def group_field_names(request: dict) -> dict:
     >>> group_field_names({'lat-begin': '1', 'lat-end': '2', 'orbit': 3})
     {'lat': {'begin': '1', 'end': '2'}, 'orbit': {'val': 3}}
     """
-    out = defaultdict(dict)
+    out: dict = defaultdict(dict)
 
     for field_expr, val in request.items():
         comps = field_expr.split("-")
@@ -221,7 +242,9 @@ def group_field_names(request: dict) -> dict:
     return dict(out)
 
 
-def get_sorted_product_summaries(product_summaries: dict, key: str) -> List:
+def get_sorted_product_summaries(
+    product_summaries: Sequence[ProductWithSummary], key: Callable[[Any], Any]
+) -> list[tuple[str, list]]:
     return sorted(
         (
             (name or "", list(items))
@@ -235,17 +258,20 @@ def get_sorted_product_summaries(product_summaries: dict, key: str) -> List:
     )
 
 
-def query_to_search(request: MultiDict, product: DatasetType) -> dict:
+def query_to_search(request: MultiDict, product: Product) -> dict:
     args = _parse_url_query_args(request, product)
 
     # If their range is backwards (high, low), let's reverse it.
     # (the intention is "between these two numbers")
     for key in args:
         value = args[key]
-        if isinstance(value, Range):
-            if value.begin is not None and value.end is not None:
-                if value.end < value.begin:
-                    args[key] = Range(value.end, value.begin)
+        if (
+            isinstance(value, Range)
+            and value.begin is not None
+            and value.end is not None
+            and value.end < value.begin
+        ):
+            args[key] = Range(value.end, value.begin)
 
     return args
 
@@ -260,8 +286,8 @@ def dataset_label(dataset: Dataset) -> str:
         return label
 
     # Otherwise try to get a file/folder name for the dataset's location.
-    for uri in dataset.uris:
-        name = _get_reasonable_file_label(uri)
+    if dataset.uri:
+        name = _get_reasonable_file_label(dataset.uri)
         if name:
             return name
 
@@ -269,7 +295,7 @@ def dataset_label(dataset: Dataset) -> str:
     return str(dataset.id)
 
 
-def _get_reasonable_file_label(uri: str) -> Optional[str]:
+def _get_reasonable_file_label(uri: str) -> str | None:
     """
     Get a label for the dataset from a URI.... if we can.
 
@@ -308,7 +334,7 @@ def _get_reasonable_file_label(uri: str) -> Optional[str]:
     return None
 
 
-def product_license(dt: DatasetType) -> Optional[str]:
+def product_license(product: Product) -> str | None:
     """
     What is the license to display for this product?
 
@@ -320,19 +346,19 @@ def product_license(dt: DatasetType) -> Optional[str]:
     Example value: "CC-BY-SA-4.0"
     """
     # Does the metadata type has a 'license' field defined?
-    if "license" in dt.metadata.fields:
-        return dt.metadata.fields["license"]
+    if "license" in product.metadata.fields:
+        return product.metadata.fields["license"]
 
     # Otherwise, look in a default location in the document, matching stac collections.
     # (Note that datacube > 1.8.0b6 is required to allow licenses in products).
-    if "license" in dt.definition:
-        return dt.definition["license"]
+    if "license" in product.definition:
+        return product.definition["license"]
 
     # Otherwise is there a global default?
     return flask.current_app.config.get("CUBEDASH_DEFAULT_LICENSE", None)
 
 
-def _next_month(date: datetime):
+def _next_month(date: datetime) -> datetime:
     if date.month == 12:
         return datetime(date.year + 1, 1, 1)
 
@@ -340,11 +366,11 @@ def _next_month(date: datetime):
 
 
 def as_time_range(
-    year: Optional[int] = None,
-    month: Optional[int] = None,
-    day: Optional[int] = None,
-    tzinfo=None,
-) -> Optional[Range]:
+    year: int | None,
+    month: int | None = None,
+    day: int | None = None,
+    tzinfo: e_tzinfo | None = None,
+) -> Range | None:
     """
     >>> as_time_range(2018)
     Range(begin=datetime.datetime(2018, 1, 1, 0, 0), end=datetime.datetime(2019, 1, 1, 0, 0))
@@ -352,8 +378,6 @@ def as_time_range(
     Range(begin=datetime.datetime(2018, 2, 1, 0, 0), end=datetime.datetime(2018, 3, 1, 0, 0))
     >>> as_time_range(2018, 8, 3)
     Range(begin=datetime.datetime(2018, 8, 3, 0, 0), end=datetime.datetime(2018, 8, 4, 0, 0))
-    >>> # Unbounded:
-    >>> as_time_range()
     """
     if year and month and day:
         start = datetime(year, month, day)
@@ -370,7 +394,7 @@ def as_time_range(
     return Range(start.replace(tzinfo=tzinfo), end.replace(tzinfo=tzinfo))
 
 
-def _parse_url_query_args(request: MultiDict, product: DatasetType) -> dict:
+def _parse_url_query_args(request: MultiDict, product: Product) -> dict[str, Any]:
     """
     Convert search arguments from url query args into datacube index search parameters
     """
@@ -379,7 +403,7 @@ def _parse_url_query_args(request: MultiDict, product: DatasetType) -> dict:
     field_groups = group_field_names(request)
 
     for field_name, field_vals in field_groups.items():
-        field: Field = product.metadata_type.dataset_fields.get(field_name)
+        field = product.metadata_type.dataset_fields.get(field_name)
         if not field:
             raise ValueError(f"No field {field_name!r} for product {product.name!r}")
 
@@ -400,10 +424,10 @@ def _parse_url_query_args(request: MultiDict, product: DatasetType) -> dict:
 
 def _field_parser(field: Field):
     if field.type_name.endswith("-range"):
-        field = field.lower
+        field = field.lower  # type: ignore[attr-defined]
 
     try:
-        parser = field.parse_value
+        parser = field.parse_value  # type: ignore[attr-defined]
     except AttributeError:
         parser = _unchanged_value
     return parser
@@ -415,15 +439,15 @@ def _unchanged_value(a):
 
 def default_utc(d: datetime) -> datetime:
     if d.tzinfo is None:
-        return d.replace(tzinfo=tz.tzutc())
+        return d.replace(tzinfo=timezone.utc)
     return d
 
 
 def now_utc() -> datetime:
-    return default_utc(datetime.utcnow())
+    return default_utc(datetime.now(timezone.utc))
 
 
-def dataset_created(dataset: Dataset) -> Optional[datetime]:
+def dataset_created(dataset: Dataset) -> datetime | None:
     if "created" in dataset.metadata.fields:
         return dataset.metadata.created
 
@@ -435,27 +459,28 @@ def dataset_created(dataset: Dataset) -> Optional[datetime]:
             _LOG.warning(
                 "invalid_dataset.creation_dt", dataset_id=dataset.id, value=value
             )
-
+    # like in _dataset_creation_expression, if there's no creation time
+    # then we fall back to indexed time (if it exists)
+    if dataset.indexed_time:
+        return default_utc(dc_utils.parse_time(dataset.indexed_time))
     return None
 
 
-def center_time_from_metadata(dataset: Dataset) -> datetime:
+def datetime_from_metadata(dataset: Dataset) -> datetime:
     """
-    This function shares the same logic as
-    https://github.com/opendatacube/datacube-explorer/blob/4afa0dbbb51d541f377c479e7edb914bdb62aef9/cubedash/summary/_extents.py#L481-L505
+    This function shares similar logic to datetime_expression (above),
+    but retrieves values for the flask template.
+    Get datetime info from metadata_doc rather than Dataset.center_time for EO3
     """
+    # seems to be a misleading name...
     md_type = dataset.metadata_type
     if expects_eo3_metadata_type(md_type):
+        # prefer using datetime or start_datetime directly
         properties = dataset.metadata_doc["properties"]
         t = properties.get("datetime") or properties.get("dtr:start_datetime")
         return default_utc(dc_utils.parse_time(t))
-
-    time = md_type.dataset_fields["time"]
-    try:
-        center_time = time.begin + (time.end - time.begin) / 2
-    except AttributeError:
-        center_time = dataset.center_time
-    return default_utc(center_time)
+    # stick with center time for EO datasets
+    return default_utc(dataset.center_time)
 
 
 def as_rich_json(o):
@@ -470,7 +495,7 @@ def as_rich_json(o):
 
 
 def as_json(
-    o, content_type="application/json", downloadable_filename_prefix: str = None
+    o, content_type="application/json", downloadable_filename_prefix: str | None = None
 ) -> flask.Response:
     """
     Serialise an object into a json flask response.
@@ -484,10 +509,8 @@ def as_json(
     prefer_formatted = "text/html" in flask.request.headers.get("Accept", ())
 
     response = flask.Response(
-        orjson.dumps(
-            o,
-            option=orjson.OPT_INDENT_2 if prefer_formatted else 0,
-            default=_json_fallback,
+        dumps(
+            o, option=OPT_INDENT_2 if prefer_formatted else 0, default=_json_fallback
         ),
         content_type=content_type,
     )
@@ -499,17 +522,17 @@ def as_json(
 
 
 def _json_fallback(o, *args, **kwargs):
-    if isinstance(o, (geometry.BoundingBox, Affine)):
+    if isinstance(o, (geom.BoundingBox, Affine)):
         return tuple(o)
 
     # I think orjson swallows our nicer error message?
     raise TypeError(
-        f"Cannot (yet) serialise object type to json: "
+        "Cannot (yet) serialise object type to json: "
         f"{o.__module__}.{type(o).__qualname__}"
     )
 
 
-def as_geojson(o, downloadable_filename_prefix: str = None):
+def as_geojson(o, downloadable_filename_prefix: str | None):
     """
     Serialise the given object into a GeoJSON flask response.
 
@@ -526,7 +549,7 @@ def as_geojson(o, downloadable_filename_prefix: str = None):
 def common_uri_prefix(uris: Sequence[str]):
     """
     This is like `os.path.commonpath()`, but always expects URL paths.
-    (ie. forward slashes in all environments, and wont strip double slashes '//')
+    (i.e. forward slashes in all environments, and will not strip double slashes '//')
 
     >>> common_uri_prefix(['file:///a/thing-1.txt'])
     'file:///a/thing-1.txt'
@@ -563,7 +586,9 @@ def common_uri_prefix(uris: Sequence[str]):
     return result[: result.rfind("/") + 1]
 
 
-def suggest_download_filename(response: flask.Response, prefix: str, suffix: str):
+def suggest_download_filename(
+    response: flask.Response, prefix: str, suffix: str
+) -> None:
     """
     Give the Browser a hint to download the file with the given filename
     (rather than display it in-line).
@@ -577,36 +602,17 @@ def suggest_download_filename(response: flask.Response, prefix: str, suffix: str
     response.headers["Content-Disposition"] = f"attachment; filename={prefix}{suffix}"
 
 
-def as_yaml(*o, content_type="text/yaml", downloadable_filename_prefix: str = None):
+def as_yaml(
+    *o, content_type: str = "text/yaml", downloadable_filename_prefix: str | None = None
+) -> flask.Response:
     """
     Return a yaml response.
 
     Multiple args will return a multi-doc yaml file.
     """
     stream = StringIO()
-
-    # TODO: remove the two functions once eo-datasets fix is released
-    def _represent_float(self, value):
-        text = np.format_float_scientific(value)
-        return self.represent_scalar("tag:yaml.org,2002:float", text)
-
-    def dumps_yaml(yml, stream, *docs) -> None:
-        """Dump yaml through a stream, using the default serialisation settings."""
-        return yml.dump_all(docs, stream=stream)
-
-    yml = eodatasets3.serialise._init_yaml()
-
-    # extend from eodatasets3 serialise
-    yml.representer.add_representer(float, _represent_float)
-    dumps_yaml(yml, stream, *o)
-    # ENDTODO
-
-    # TODO: once upstream is fixed, use the below line only
-    # eodatasets3.serialise.dumps_yaml(stream, *o)
-    response = flask.Response(
-        stream.getvalue(),
-        content_type=content_type,
-    )
+    eodatasets3.serialise.dumps_yaml(stream, *o)
+    response = flask.Response(stream.getvalue(), content_type=content_type)
     if downloadable_filename_prefix:
         suggest_download_filename(response, downloadable_filename_prefix, ".yaml")
 
@@ -616,7 +622,7 @@ def as_yaml(*o, content_type="text/yaml", downloadable_filename_prefix: str = No
 _ALNUM_PATTERN = re.compile("[^0-9a-zA-Z]+")
 
 
-def only_alphanumeric(s: str):
+def only_alphanumeric(s: str) -> str:
     """
     Strip any chars that aren't simple alphanumeric.
 
@@ -631,8 +637,8 @@ def only_alphanumeric(s: str):
 def as_csv(
     *,
     filename_prefix: str,
-    headers: Tuple[str, ...],
-    rows: Iterable[Tuple[object, ...]],
+    headers: tuple[str, ...],
+    rows: Iterable[tuple[object, ...]],
 ):
     """Return a CSV Flask response."""
     out = io.StringIO()
@@ -640,19 +646,13 @@ def as_csv(
     cw.writerow(headers)
     cw.writerows(rows)
     response = flask.make_response(out.getvalue())
-    suggest_download_filename(
-        response,
-        filename_prefix,
-        ".csv",
-    )
+    suggest_download_filename(response, filename_prefix, ".csv")
     response.headers["Content-type"] = "text/csv"
     return response
 
 
 def prepare_dataset_formatting(
-    dataset: Dataset,
-    include_source_url=False,
-    include_locations=False,
+    dataset: Dataset, include_source_url=False, include_locations=False
 ) -> CommentedMap:
     """
     Try to format a raw Dataset document for readability.
@@ -662,35 +662,30 @@ def prepare_dataset_formatting(
     doc = dict(dataset.metadata_doc)
 
     if include_locations:
-        if len(dataset.uris) == 1:
-            doc["location"] = dataset.uris[0]
-        else:
-            doc["locations"] = dataset.uris
+        doc["location"] = dataset.uri
 
     # If it's EO3, use eodatasets's formatting. It's better.
     if is_doc_eo3(doc):
         doc = eodatasets3.serialise.prepare_formatting(doc)
         if include_source_url:
             doc.yaml_set_comment_before_after_key(
-                "$schema",
-                before=f"url: {flask.request.url}",
+                "$schema", before=f"url: {flask.request.url}"
             )
         # Strip EO-legacy fields.
         undo_eo3_compatibility(doc)
         return doc
-    else:
-        return prepare_document_formatting(
-            doc,
-            # Label old-style datasets as old-style datasets.
-            doc_friendly_label="EO1 Dataset",
-            include_source_url=include_source_url,
-        )
+    return prepare_document_formatting(
+        doc,
+        # Label old-style datasets as old-style datasets.
+        doc_friendly_label="EO1 Dataset",
+        include_source_url=include_source_url,
+    )
 
 
 def prepare_document_formatting(
     metadata_doc: Mapping,
     doc_friendly_label: str = "",
-    include_source_url: Union[bool, str] = False,
+    include_source_url: bool | str = False,
 ):
     """
     Try to format a raw document for readability.
@@ -698,8 +693,8 @@ def prepare_document_formatting(
     This will change property order, add comments on the type & source url.
     """
 
-    def get_property_priority(ordered_properties: List, keyval):
-        key, val = keyval
+    def get_property_priority(ordered_properties: list, keyval):
+        key, _ = keyval
         if key not in ordered_properties:
             return 999
         return ordered_properties.index(key)
@@ -748,8 +743,7 @@ def prepare_document_formatting(
     if header_comments:
         # Add comments above the first key of the document.
         ordered_metadata.yaml_set_comment_before_after_key(
-            next(iter(metadata_doc.keys())),
-            before="\n".join(header_comments),
+            next(iter(metadata_doc.keys())), before="\n".join(header_comments)
         )
     return ordered_metadata
 
@@ -769,11 +763,11 @@ def api_path_as_filename_prefix():
     (the suffix is added by the response)
     """
     stem = flask.request.path.split(".")[0]
-    api, kind, *period = stem.strip("/").split("/")
+    _, kind, *period = stem.strip("/").split("/")
     return "-".join([*period, kind])
 
 
-def undo_eo3_compatibility(doc):
+def undo_eo3_compatibility(doc) -> None:
     """
     In-place removal and undo-ing of the EO-compatibility fields added by ODC to EO3
      documents on index.
@@ -783,7 +777,7 @@ def undo_eo3_compatibility(doc):
     if "extent" in doc:
         del doc["extent"]
 
-    lineage = doc.get("lineage")
+    lineage = doc.get("lineage", {})
     # If old EO1-style lineage was built (as it is on dataset.get(include_sources=True),
     # flatten to EO3-style ID lists.
 
@@ -791,7 +785,7 @@ def undo_eo3_compatibility(doc):
     #       and we're now throwing it all away except the top-level ids.
 
     if "source_datasets" in lineage:
-        new_lineage = {}
+        new_lineage: dict = {}
         for classifier, dataset_doc in lineage["source_datasets"].items():
             new_lineage.setdefault(classifier, []).append(dataset_doc["id"])
         doc["lineage"] = new_lineage
@@ -847,7 +841,7 @@ EODATASETS_LINEAGE_PROPERTY_ORDER = [
 ]
 
 
-def dataset_shape(ds: Dataset) -> Tuple[Optional[Polygon], bool]:
+def dataset_shape(ds: Dataset) -> tuple[Polygon | None, bool]:
     """
     Get a usable extent from the dataset (if possible), and return
     whether the original was valid.
@@ -863,15 +857,15 @@ def dataset_shape(ds: Dataset) -> Tuple[Optional[Polygon], bool]:
     if extent is None:
         log.warning("invalid_dataset.empty_extent")
         return None, False
-    geom = shape(extent.to_crs(CRS(_TARGET_CRS)))
+    ds_geom = shape(extent.to_crs(CRS(_TARGET_CRS)))
 
-    if not geom.is_valid:
+    if not ds_geom.is_valid:
         log.warning(
             "invalid_dataset.invalid_extent",
-            reason_text=shapely.validation.explain_validity(geom),
+            reason_text=shapely.validation.explain_validity(ds_geom),
         )
         # A zero distance may be used to “tidy” a polygon.
-        clean = geom.buffer(0.0)
+        clean = ds_geom.buffer(0.0)
         assert clean.geom_type in (
             "Polygon",
             "MultiPolygon",
@@ -879,161 +873,18 @@ def dataset_shape(ds: Dataset) -> Tuple[Optional[Polygon], bool]:
         assert clean.is_valid
         return clean, False
 
-    if geom.is_empty:
+    if ds_geom.is_empty:
         _LOG.warning("invalid_dataset.empty_extent_geom", dataset_id=ds.id)
         return None, False
 
-    return geom, True
+    return ds_geom, True
 
 
-def bbox_as_geom(dataset):
+def bbox_as_geom(dataset: Dataset) -> Geometry | None:
     """Get dataset bounds as to Geometry object projected to target CRS"""
     if dataset.crs is None:
         return None
-    return geometry.box(*dataset.bounds, crs=dataset.crs).to_crs(CRS(_TARGET_CRS))
-
-
-# ######################### WARNING ############################### #
-#  These functions are bad and access non-public parts of datacube  #
-#     They are kept here in one place for easy criticism.           #
-# ################################################################# #
-
-
-def alchemy_engine(index: Index) -> Engine:
-    # There's no public api for sharing the existing engine (it's an implementation detail of the current index).
-    # We could create our own from config, but there's no api for getting the ODC config for the index either.
-    # pylint: disable=protected-access
-    return index.datasets._db._engine
-
-
-# somewhat misleading name
-def make_dataset_from_select_fields(index, row):
-    # pylint: disable=protected-access
-    return index.datasets._make(row, full_info=True)
-
-
-# pylint: disable=protected-access
-DATASET_SELECT_FIELDS = pgapi._DATASET_SELECT_FIELDS
-
-try:
-    ODC_DATASET_TYPE = datacube.drivers.postgres._schema.PRODUCT
-except AttributeError:
-    # ODC 1.7 and earlier.
-    ODC_DATASET_TYPE = datacube.drivers.postgres._schema.DATASET_TYPE
-
-ODC_DATASET = datacube.drivers.postgres._schema.DATASET
-
-ODC_DATASET_LOCATION = datacube.drivers.postgres._schema.DATASET_LOCATION
-
-try:
-    from datacube.drivers.postgres._core import install_timestamp_trigger
-except ImportError:
-
-    def install_timestamp_trigger(connection):
-        raise RuntimeError(
-            "ODC version does not contain update-trigger installation. "
-            "Cannot install dataset-update trigger."
-        )
-
-
-def get_mutable_dataset_search_fields(
-    index: Index, md: MetadataType
-) -> Dict[str, PgDocField]:
-    """
-    Get a copy of a metadata type's fields that we can mutate.
-
-    (the ones returned by the Index are cached and so may be shared among callers)
-    """
-    return index._db.get_dataset_fields(md.definition)
-
-
-def get_dataset_sources(
-    index: Index, dataset_id: UUID, limit=None
-) -> Tuple[Dict[str, Dataset], int]:
-    """
-    Get the direct source datasets of a dataset, but without loading the whole upper provenance tree.
-
-    This is a lighter alternative to doing `index.datasets.get(include_source=True)`
-
-    A limit can also be specified.
-
-    Returns a source dict and how many more sources exist beyond the limit.
-    """
-    dataset_source = datacube.drivers.postgres._schema.DATASET_SOURCE
-    query = select(
-        [dataset_source.c.source_dataset_ref, dataset_source.c.classifier]
-    ).where(dataset_source.c.dataset_ref == dataset_id)
-    if limit:
-        # We add one to detect if there are more records after out limit.
-        query = query.limit(limit + 1)
-
-    engine = alchemy_engine(index)
-    dataset_classifier = engine.execute(query).fetchall()
-
-    if not dataset_classifier:
-        return {}, 0
-
-    remaining_records = 0
-    if limit and len(dataset_classifier) > limit:
-        dataset_classifier = dataset_classifier[:limit]
-        remaining_records = (
-            engine.execute(
-                select(func.count())
-                .select_from(dataset_source)
-                .where(dataset_source.c.dataset_ref == dataset_id)
-            ).scalar()
-            - limit
-        )
-
-    classifier = dict(dataset_classifier)
-    return {
-        classifier[d.id]: d
-        for d in (
-            index.datasets.bulk_get(dataset_id for dataset_id, _ in dataset_classifier)
-        )
-    }, remaining_records
-
-
-def get_datasets_derived(
-    index: Index, dataset_id: UUID, limit=None
-) -> Tuple[List[Dataset], int]:
-    """
-    this is similar to ODC's connection.get_derived_datasets() but allows a
-    limit, and will return a total count.
-    """
-    dataset_source = datacube.drivers.postgres._schema.DATASET_SOURCE
-    query = (
-        select(DATASET_SELECT_FIELDS)
-        .select_from(
-            ODC_DATASET.join(
-                dataset_source, ODC_DATASET.c.id == dataset_source.c.dataset_ref
-            )
-        )
-        .where(dataset_source.c.source_dataset_ref == dataset_id)
-    )
-    if limit:
-        # We add one to detect if there are more records after out limit.
-        query = query.limit(limit + 1)
-
-    engine = alchemy_engine(index)
-
-    remaining_records = 0
-    total_count = 0
-    datasets = engine.execute(query).fetchall()
-
-    if limit and len(datasets) > limit:
-        datasets = datasets[:limit]
-        total_count = engine.execute(
-            select(func.count())
-            .select_from(
-                ODC_DATASET.join(
-                    dataset_source, ODC_DATASET.c.id == dataset_source.c.dataset_ref
-                )
-            )
-            .where(dataset_source.c.source_dataset_ref == dataset_id)
-        ).scalar()
-        remaining_records = total_count - limit
-
-    return [
-        make_dataset_from_select_fields(index, dataset) for dataset in datasets
-    ], remaining_records
+    bounds = dataset.bounds
+    if bounds is None:
+        return None
+    return geom.box(*bounds.bbox, crs=dataset.crs).to_crs(CRS(_TARGET_CRS))

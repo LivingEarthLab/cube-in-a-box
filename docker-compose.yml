@@ -2,13 +2,13 @@ name: cube-in-a-box
 
 services:
   traefik:
-    image: traefik:v3.6
+    image: traefik:v3.6.1
     container_name: ${COMPOSE_PROJECT_NAME}-traefik
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik"
+      - "--providers.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
@@ -70,8 +70,7 @@ services:
         --ServerApp.allow_origin='*'
         --allow-root
         --ip=0.0.0.0
-        --NotebookApp.base_url='/jupyter'
-        --NotebookApp.token=''
+        --no-browser
     restart: unless-stopped
     networks:
       - traefik
@@ -103,11 +102,15 @@ services:
       context: datacube-explorer
       dockerfile: Dockerfile
     environment:
-      - DB_HOSTNAME=postgres
-      - DB_USERNAME=opendatacube
-      - DB_PASSWORD=opendatacubepassword
-      - DB_DATABASE=opendatacube
-      - DB_PORT=5432
+      - POSTGRES_HOSTNAME=postgres
+      - PGPORT=5432
+      - POSTGRES_USER=opendatacube
+      - POSTGRES_PASSWORD=opendatacubepassword
+      - POSTGRES_DB=opendatacube
+      - ODC_DEFAULT_INDEX_DRIVER=postgres
+      - ODC_POSTGIS_INDEX_DRIVER=postgis
+      - ODC_DEFAULT_DB_URL=postgresql://opendatacube:opendatacubepassword@postgres:5432/opendatacube
+      - ODC_POSTGIS_DB_URL=postgresql://opendatacube:opendatacubepassword@postgres:5432/opendatacube
       - FLASK_ENV=development
       - FLASK_APP=cubedash
       - FLASK_DEBUG=1
