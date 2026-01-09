@@ -1,35 +1,35 @@
  --extra-index-url https://packages.dea.ga.gov.au/
 aiohttp
-aiobotocore[boto3,awscli]==1.0.7
+aiobotocore[boto3,awscli]
 pyyaml
 wget
 requests
-datacube==1.9.0
+datacube>=1.8.15
 odc-stac
 odc-stats
 odc-dscache
 odc-cloud[ASYNC]
-odc-ui==0.2.0a0  # to fix widgets issues
+odc-ui  # to fix widgets issues
 odc-io
-odc-apps-dc-tools==0.2.18
-dask==2023.10.1
-distributed==2023.10.1
+odc-apps-dc-tools
+dask
+distributed
 # Jupyter components.
-gdal
+# gdal is provided by base image
 scipy
 # jupyter==1.0.0
-jupyterlab==3.2.0
+jupyterlab
 ipyleaflet
 folium
-pandas==1.3.4
-numpy==1.26.4
-xarray==0.16.0
+pandas
+# numpy  # Provided by base image
+xarray
 matplotlib
 geopandas
 scikit-image
 tqdm
-click<8.1.0
-python-dateutil==2.7.5
+click
+python-dateutil
 netCDF4
 
 # for tests
@@ -37,18 +37,18 @@ pytest
 testbook
 
 # for Dask dashboard
-bokeh  # !=3.0.*,>=2.4.2
+bokeh
 
 # for planetary computer
 planetary-computer
 
 # fix "KeyError: 'proj:epsg'"
-pystac==1.12.0
+pystac>=1.6.0
 
 rioxarray
 
-jupyterlab_widgets==1.1.1
-ipywidgets==7.7.5
+jupyterlab_widgets
+ipywidgets
 
 jupyter-server-proxy
 dask-labextension
