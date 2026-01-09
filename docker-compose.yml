@@ -41,6 +41,7 @@ services:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20251028
     container_name: ${COMPOSE_PROJECT_NAME}-jupyter
     build: .
+    init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
       - ODC_DEFAULT_DB_USERNAME=opendatacube
