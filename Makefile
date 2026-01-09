@@ -50,9 +50,7 @@ index-sentinel-2-l2a:
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-2-l2a' \
 			--datetime='$(DATETIME)' \
-			--archive-less-mature"
-			# archive-less-mature option will trigger an ERROR message (which should
-			# be a WARNING), but is needed to get rid of ols versions of a scene
+			--rename-product='s2_l2a'"
 index-io-lulc-annual-v02:
 	docker compose exec -T jupyter bash -c \
 		"stac-to-dc \
