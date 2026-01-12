@@ -2,62 +2,69 @@
 ## Start by running `setup` then you should have a system that is fully configured
 ##
 ## Once running, you can access a Jupyter environment at 'http://localhost'
-.PHONY: help setup up down clean
+.PHONY: help setup up down clean build init product index index-parallel index-serie \
+        index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
+        index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-sentinel-1-rtc \
+        update-explorer shell logs status purge-data build-nocache pull
 
+# Defaults (override on the command line: make BBOX="..." DATETIME="...")
 # BBOX=<left>,<bottom>,<right>,<top>
-BBOX := 25,20,35,30
+BBOX ?= 25,20,35,30
 # DATETIME=<start_date>/<end_date> e.g. 2021-06-01/2021-07-01
-DATETIME := 2021-12-01/2021-12-31
+DATETIME ?= 2021-12-01/2021-12-31
 
-help: ## Print this help
-	@grep -E '^##.*$$' $(MAKEFILE_LIST) | cut -c'4-'
-	@echo
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-10s\033[0m %s\n", $$1, $$2}'
+# Docker Compose wrapper (optionally override PROJECT: make PROJECT=myproj up)
+PROJECT ?= cube-in-a-box
+DC := docker compose -p $(PROJECT)
 
-setup: build up init product index update-explorer
+build: ## Rebuild the base image
+	@$(DC) build --pull
 
-up: ## 1. Bring up your Docker environment
-	docker compose up -d --remove-orphans
+build-nocache: ## Full rebuild without cache (slower)
+	@$(DC) build --pull --no-cache
 
-init: ## 2. Prepare the database
-	docker compose exec -T jupyter datacube -v system init
+clean: ## Remove containers/images/volumes
+	@$(DC) down --rmi all -v --remove-orphans
 
-product: ## 3. Add a product definition for Sentinel-2
-	docker compose exec -T jupyter sh -c "datacube product add /conf/*.odc-product.yaml"
-# 	docker compose exec -T jupyter datacube product add /conf/s1_rtc.odc-product.yaml
-# 	docker compose exec -T jupyter datacube product add /conf/*.odc-product.yaml
-# 	docker compose exec -T jupyter dc-sync-products /conf/products.csv
-# 	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml
-# 	docker compose exec -T jupyter datacube product add /conf/io_lulc_annual_v02.product.yaml
+down: ## Bring down the system
+	@$(DC) down --remove-orphans
 
-index: index-parallel  ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')
-index-parallel:
-	bash index-parallel.sh  # new products to be indexed to be added there as well
-index-serie: index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
-             index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
-             index-sentinel-1-rtc
-index-sentinel-2-l2a:
-	docker compose exec -T jupyter bash -c \
+index: index-parallel ## Index some data (override with BBOX='...' DATETIME='...')
+	@true
+
+index-parallel: ## Index data using index-parallel.sh
+	@bash index-parallel.sh  # new products to be indexed to be added there as well
+
+index-serie: ## Index data sequentially (legacy)
+	@$(MAKE) index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
+	         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
+	         index-sentinel-1-rtc
+
+index-sentinel-2-l2a: # Index Sentinel-2 L2A
+	@$(DC) exec -T jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-2-l2a' \
 			--datetime='$(DATETIME)' \
 			--rename-product='s2_l2a'"
-index-io-lulc-annual-v02:
-	docker compose exec -T jupyter bash -c \
+
+index-io-lulc-annual-v02: # Index IO LULC Annual v02 (non-fatal if empty)
+	@$(DC) exec -T jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
-			--catalog-href=https://planetarycomputer.microsoft.com/api/stac/v1/ \
+			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='io-lulc-annual-v02'" || true
-index-nasadem:
-	docker compose exec -T jupyter bash -c \
+
+index-nasadem: # Index NASADEM
+	@$(DC) exec -T jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='nasadem'"
-index-ls45_c2l2_sp:
-	docker compose exec -T jupyter bash -c \
+
+index-ls45_c2l2_sp: # Index Landsat 4/5 Collection 2 L2
+	@$(DC) exec -T jupyter bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -65,8 +72,9 @@ index-ls45_c2l2_sp:
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-4\",\"landsat-5\"]}}' \
             --rename-product='ls45_c2l2_sp'"
-index-ls7_c2l2_sp:
-	docker compose exec -T jupyter bash -c \
+
+index-ls7_c2l2_sp: # Index Landsat 7 Collection 2 L2
+	@$(DC) exec -T jupyter bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -74,8 +82,9 @@ index-ls7_c2l2_sp:
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-7\"]}}' \
             --rename-product='ls7_c2l2_sp'"
-index-ls89_c2l2_sp:
-	docker compose exec -T jupyter bash -c \
+
+index-ls89_c2l2_sp: # Index Landsat 8/9 Collection 2 L2
+	@$(DC) exec -T jupyter bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -83,37 +92,51 @@ index-ls89_c2l2_sp:
             --datetime='$(DATETIME)' \
             --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
             --rename-product='ls89_c2l2_sp'"
-index-sentinel-1-rtc:
-	docker compose exec -T jupyter bash -c \
+
+index-sentinel-1-rtc: # Index Sentinel-1 RTC
+	@$(DC) exec -T jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-1-rtc' \
 			--datetime='$(DATETIME)'"
 
-update-explorer: # Update the Explorer DB
-	docker compose exec -T explorer cubedash-gen --init --all
+init: ## Prepare the database
+	@$(DC) exec -T jupyter datacube -v system init
 
-down: ## Bring down the system
-	docker compose down
-
-build: ## Rebuild the base image
-	docker compose pull --ignore-pull-failures
-	docker compose build
-
-shell: ## Start an interactive shell
-	docker compose exec jupyter bash
-
-clean: ## Delete everything
-	docker compose down --rmi all -v
-	docker run --rm -v ./data/pg:/data/pg alpine sh -c "rm -rf /data/pg/*" || true
-	docker rmi alpine || true
+help: ## Print this help
+	@grep -E '^##.*$$' $(MAKEFILE_LIST) | cut -c'4-'
+	@echo
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 logs: ## Show the logs from the stack
-	docker compose logs --follow
+	@$(DC) logs --follow
 
-build-image:
-	docker build --tag opendatacube/cube-in-a-box .
+product: ## Add a product definition for Sentinel-2
+	@$(DC) exec -T jupyter bash -lc "datacube product add /conf/*.odc-product.yaml"
 
-push-image:
-	docker push opendatacube/cube-in-a-box
+pull: ## Pull external service images (traefik/postgres, etc.)
+	@$(DC) pull
+
+purge-data: ## Delete local bind-mounted data (irreversible)
+	@rm -rf ./data/pg/* || true
+	@rm -rf ./data/local_data/* || true
+
+shell: ## Start an interactive shell in the jupyter container
+	@$(DC) exec jupyter bash
+
+setup: ## Full setup using existing images
+	@$(MAKE) up init product index update-explorer
+
+setup-build: ## Full setup rebuilding images first (Jupyter & Explorer)
+	@$(MAKE) build up init product index update-explorer
+
+status: ## Show container status
+	@$(DC) ps
+
+up: ## Bring up your Docker environment
+	@$(DC) up -d --remove-orphans --wait --wait-timeout 120
+
+update-explorer: ## Update the Explorer DB
+	@$(DC) exec -T explorer cubedash-gen --init --all
