@@ -2,7 +2,7 @@ FROM ghcr.io/osgeo/gdal:ubuntu-small-3.12.1
 
 LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
       org.opencontainers.image.description="The Cube in a Box is a simple way to run the Open Data Cube." \
-      org.opencontainers.image.licenses="Apache-2.0"
+      org.opencontainers.image.licenses="MIT"
 
 # Environment setup
 ENV DEBIAN_FRONTEND=noninteractive \
