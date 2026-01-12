@@ -1,8 +1,7 @@
 ## You can follow the steps below in order to get yourself a local ODC.
 ## Start by running `setup` then you should have a system that is fully configured
 ##
-## Once running, you can access a Jupyter environment
-## at 'http://localhost' with password 'secretpassword'
+## Once running, you can access a Jupyter environment at 'http://localhost'
 .PHONY: help setup up down clean
 
 # BBOX=<left>,<bottom>,<right>,<top>
@@ -15,15 +14,10 @@ help: ## Print this help
 	@echo
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-10s\033[0m %s\n", $$1, $$2}'
 
-setup: build up init product index update-explorer ## Run a full local/development setup
-setup-prod: up-prod init product index update-explorer ## Run a full production setup
+setup: build up init product index update-explorer
 
 up: ## 1. Bring up your Docker environment
-	docker compose up -d traefik
-	docker compose up -d postgres
-	docker compose run checkdb
-	docker compose up -d jupyter --remove-orphans
-	docker compose up -d explorer
+	docker compose up -d --remove-orphans
 
 init: ## 2. Prepare the database
 	docker compose exec -T jupyter datacube -v system init
@@ -35,7 +29,6 @@ product: ## 3. Add a product definition for Sentinel-2
 # 	docker compose exec -T jupyter dc-sync-products /conf/products.csv
 # 	docker compose exec -T jupyter datacube product add /conf/lsX_c2l2_sp.products.yaml
 # 	docker compose exec -T jupyter datacube product add /conf/io_lulc_annual_v02.product.yaml
-
 
 index: index-parallel  ## 4. Index some data (Change extents with BBOX='<left>,<bottom>,<right>,<top>')
 index-parallel:
@@ -119,35 +112,8 @@ clean: ## Delete everything
 logs: ## Show the logs from the stack
 	docker compose logs --follow
 
-upload-s3: # Update S3 template (this is owned by Digital Earth Australia)
-	aws s3 cp cube-in-a-box-cloudformation.yml s3://opendatacube-cube-in-a-box/ --acl public-read
-
 build-image:
 	docker build --tag opendatacube/cube-in-a-box .
 
 push-image:
 	docker push opendatacube/cube-in-a-box
-
-up-prod: ## Bring up production version
-	docker compose -f docker-compose-prod.yml pull
-	docker compose -f docker-compose.yml -f docker-compose-prod.yml up --detach postgres
-	docker compose run checkdb
-	docker compose -f docker-compose.yml -f docker-compose-prod.yml up --detach --no-build
-
-# This section can be used to deploy onto CloudFormation instead of the 'magic link'
-create-infra:
-	aws cloudformation create-stack \
-		--region eu-west-1 \
-		--stack-name odc-test \
-		--template-body file://cube-in-a-box-cloudformation.yml \
-		--parameter file://parameters.json \
-		--tags Key=Name,Value=OpenDataCube \
-		--capabilities CAPABILITY_NAMED_IAM
-
-update-infra:
-	aws cloudformation update-stack \
-		--stack-name eu-west-1 \
-		--template-body file://cube-in-a-box-cloudformation.yml \
-		--parameter file://parameters.json \
-		--tags Key=Name,Value=OpenDataCube \
-		--capabilities CAPABILITY_NAMED_IAM

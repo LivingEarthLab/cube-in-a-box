@@ -10,32 +10,43 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
       - "--entrypoints.web.address=:80"
+      - "--ping=true"
     ports:
       - "80:80"
-      - "8081:8080"  # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     restart: unless-stopped
     networks:
       - traefik
+    labels:
+      - "com.cube-in-a-box.service=traefik"
 
   postgres:
     image: kartoza/postgis:18-3.6
     container_name: ${COMPOSE_PROJECT_NAME}-postgres
     environment:
-      - POSTGRES_DB=opendatacube
-      - POSTGRES_PASSWORD=opendatacubepassword
-      - POSTGRES_USER=opendatacube
+      - POSTGRES_DBNAME=${POSTGRES_DBNAME}
+      - POSTGRES_PASS=${POSTGRES_PASS}
+      - POSTGRES_USER=${POSTGRES_USER}
     volumes:
-      - ./data/pg:/var/lib/postgresql/17/main
+      - ./data/pg:/var/lib/postgresql/
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U opendatacube -d opendatacube -h localhost -p 5432 || exit 1"]
+      test: ["CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p 5432"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
     restart: unless-stopped
     networks:
       - backend
+    labels:
+      - "com.cube-in-a-box.service=postgres"
 
   jupyter:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20251028
@@ -44,9 +55,9 @@ services:
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
-      - ODC_DEFAULT_DB_USERNAME=opendatacube
-      - ODC_DEFAULT_DB_PASSWORD=opendatacubepassword
-      - ODC_DEFAULT_DB_DATABASE=opendatacube
+      - ODC_DEFAULT_DB_USERNAME=${POSTGRES_USER}
+      - ODC_DEFAULT_DB_PASSWORD=${POSTGRES_PASS}
+      - ODC_DEFAULT_DB_DATABASE=${POSTGRES_DBNAME}
       - AWS_NO_SIGN_REQUEST=true
       - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
       - BOKEH_RESOURCES=inline
@@ -54,10 +65,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      traefik:
+        condition: service_healthy
     volumes:
       - ./notebooks:/notebooks
-      - ./tests:/tests
-      - ./products:/products
+      - ./products:/conf
       - ./data/local_data:/local_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
     command:
@@ -66,11 +78,11 @@ services:
       - >
         jupyter lab
         --ServerApp.base_url=/jupyter
+        --ServerApp.disable_check_xsrf=True
         --ServerApp.trust_xheaders=True
         --ServerApp.allow_remote_access=True
         --ServerApp.allow_origin='*'
-        --ServerApp.token=''
-        --allow-root
+        --IdentityProvider.token=${JUPYTER_PASSWORD}
         --ip=0.0.0.0
         --port=8888
         --no-browser
@@ -79,6 +91,7 @@ services:
       - traefik
       - backend
     labels:
+      - "com.cube-in-a-box.service=jupyter"
       - "traefik.enable=true"
       - "traefik.http.routers.jupyter.rule=Host(`${DOMAIN}`) && PathPrefix(`/jupyter`)"
       - "traefik.http.routers.jupyter.entrypoints=web"
@@ -86,17 +99,6 @@ services:
       - "traefik.http.routers.jupyter.service=jupyter"
       - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
-
-  checkdb:
-    image: schaffdev/port_check:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-checkdb
-    environment:
-      - CHECK_HOST=postgres
-      - CHECK_PORT=5432
-    depends_on:
-      - postgres
-    networks:
-      - backend
 
   explorer:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20251028
@@ -107,13 +109,13 @@ services:
     environment:
       - POSTGRES_HOSTNAME=postgres
       - PGPORT=5432
-      - POSTGRES_USER=opendatacube
-      - POSTGRES_PASSWORD=opendatacubepassword
-      - POSTGRES_DB=opendatacube
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+      - POSTGRES_DB=${POSTGRES_DBNAME}
       - ODC_DEFAULT_INDEX_DRIVER=postgres
       - ODC_POSTGIS_INDEX_DRIVER=postgis
-      - ODC_DEFAULT_DB_URL=postgresql://opendatacube:opendatacubepassword@postgres:5432/opendatacube
-      - ODC_POSTGIS_DB_URL=postgresql://opendatacube:opendatacubepassword@postgres:5432/opendatacube
+      - ODC_DEFAULT_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@postgres:5432/${POSTGRES_DBNAME}
+      - ODC_POSTGIS_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@postgres:5432/${POSTGRES_DBNAME}
       - FLASK_ENV=development
       - FLASK_APP=cubedash
       - FLASK_DEBUG=1
@@ -123,6 +125,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      traefik:
+        condition: service_healthy
     volumes:
       - ./data/local_data:/local_data
     restart: unless-stopped
@@ -130,6 +134,7 @@ services:
       - traefik
       - backend
     labels:
+      - "com.cube-in-a-box.service=explorer"
       - "traefik.enable=true"
       - "traefik.http.routers.explorer.rule=Host(`${DOMAIN}`) && PathPrefix(`/explorer`)"
       - "traefik.http.routers.explorer.entrypoints=web"

@@ -1,31 +1,54 @@
-FROM --platform=linux/amd64 ghcr.io/osgeo/gdal:ubuntu-small-3.9.2
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.12.1
 
+LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
+      org.opencontainers.image.description="The Cube in a Box is a simple way to run the Open Data Cube." \
+      org.opencontainers.image.licenses="Apache-2.0"
+
+# Environment setup
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C.UTF-8 \
     LANG=C.UTF-8 \
-    SHELL=/bin/bash
+    SHELL=/bin/bash \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    CXXFLAGS="-include cstdint"
 
+# Install system dependencies
 RUN apt-get update && \
-    apt-get install -y \
-      build-essential \
-      git \
-      # For Psycopg2
-      libpq-dev python3-dev \
-      python3-pip \
-      python3-wheel \
-      python3-venv \
-      wget \
-    && apt-get autoclean \
-    && apt-get autoremove \
-    && rm -rf /var/lib/{apt,dpkg,cache,log}
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    libgomp1 \
+    libpq-dev \
+    python3-dev \
+    python3-pip \
+    python3-wheel \
+    python3-venv \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-ENV PATH="/opt/venv/bin:$PATH"
+# Create non-root user
+RUN useradd -m -u 1001 -s /bin/bash jupyter && \
+    mkdir -p /notebooks /opt/venv && \
+    chown -R jupyter:jupyter /notebooks /opt/venv
 
-COPY requirements.txt /conf/
-COPY ./products/* /conf/
-RUN python3 -m venv /opt/venv --system-site-packages && \
-    pip3 install --no-cache-dir --requirement /conf/requirements.txt
+# Create virtual environment
+RUN python3 -m venv /opt/venv --system-site-packages
 
+# Copy and install Python dependencies
+COPY --chown=jupyter:jupyter requirements.txt .
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip3 install --no-cache-dir --requirement requirements.txt && \
+    rm -f requirements.txt
+
+# Switch to non-root user
+USER jupyter
 WORKDIR /notebooks
 
-CMD ["jupyter", "lab", "--allow-root", "--ip=0.0.0.0", "--NotebookApp.token=''"]
+# Expose Jupyter port
+EXPOSE 8888
+
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser"]
