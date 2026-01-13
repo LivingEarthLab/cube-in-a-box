@@ -1,0 +1,13 @@
+services:
+  jupyter:
+    image: cube-in-a-box-jupyter:dev
+    build:
+      context: .
+    pull_policy: never
+
+  explorer:
+    image: cube-in-a-box-explorer:dev
+    build:
+      context: datacube-explorer
+      dockerfile: Dockerfile
+    pull_policy: never

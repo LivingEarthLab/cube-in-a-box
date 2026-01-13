@@ -49,9 +49,8 @@ services:
       - "com.cube-in-a-box.service=postgres"
 
   jupyter:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20251028
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260113
     container_name: ${COMPOSE_PROJECT_NAME}-jupyter
-    build: .
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
@@ -101,11 +100,8 @@ services:
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
   explorer:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20251028
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260113
     container_name: ${COMPOSE_PROJECT_NAME}-explorer
-    build:
-      context: datacube-explorer
-      dockerfile: Dockerfile
     environment:
       - POSTGRES_HOSTNAME=postgres
       - PGPORT=5432
