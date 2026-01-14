@@ -2,14 +2,15 @@ name: cube-in-a-box
 
 services:
   traefik:
-    image: traefik:v3.6.1
-    container_name: ${COMPOSE_PROJECT_NAME}-traefik
+    image: traefik:v3.6.6
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
       - "--entrypoints.web.address=:80"
+      - "--log.level=INFO"
+      - "--accesslog=true"
       - "--ping=true"
     ports:
       - "80:80"
@@ -24,12 +25,9 @@ services:
     restart: unless-stopped
     networks:
       - traefik
-    labels:
-      - "com.cube-in-a-box.service=traefik"
 
   postgres:
     image: kartoza/postgis:18-3.6
-    container_name: ${COMPOSE_PROJECT_NAME}-postgres
     environment:
       - POSTGRES_DBNAME=${POSTGRES_DBNAME}
       - POSTGRES_PASS=${POSTGRES_PASS}
@@ -45,12 +43,9 @@ services:
     restart: unless-stopped
     networks:
       - backend
-    labels:
-      - "com.cube-in-a-box.service=postgres"
 
   jupyter:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260113
-    container_name: ${COMPOSE_PROJECT_NAME}-jupyter
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
@@ -90,7 +85,6 @@ services:
       - traefik
       - backend
     labels:
-      - "com.cube-in-a-box.service=jupyter"
       - "traefik.enable=true"
       - "traefik.http.routers.jupyter.rule=Host(`${DOMAIN}`) && PathPrefix(`/jupyter`)"
       - "traefik.http.routers.jupyter.entrypoints=web"
@@ -101,7 +95,6 @@ services:
 
   explorer:
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260114
-    container_name: ${COMPOSE_PROJECT_NAME}-explorer
     environment:
       - POSTGRES_HOSTNAME=postgres
       - PGPORT=5432
@@ -130,7 +123,6 @@ services:
       - traefik
       - backend
     labels:
-      - "com.cube-in-a-box.service=explorer"
       - "traefik.enable=true"
       - "traefik.http.routers.explorer.rule=Host(`${DOMAIN}`) && PathPrefix(`/explorer`)"
       - "traefik.http.routers.explorer.entrypoints=web"
