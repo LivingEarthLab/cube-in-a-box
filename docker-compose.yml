@@ -100,7 +100,7 @@ services:
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
   explorer:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260113
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260114
     container_name: ${COMPOSE_PROJECT_NAME}-explorer
     environment:
       - POSTGRES_HOSTNAME=postgres

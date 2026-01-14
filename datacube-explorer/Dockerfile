@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM opendatacube/explorer:3.1.0@sha256:8f2de5e204f93ab3ba152531b376feebe8b5a7f7441ff110d2d7aea1ae366d0f  AS runtime
+FROM git.unepgrid.ch/nostradamus/explorer:3.1.2@sha256:9d4a5f81c167ac45156830c93b7c27bf42bee19d09c91b85dc1482dbdf88f88c AS runtime
 
 LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
       org.opencontainers.image.description="Datacube Explorer with planetary-computer support" \
