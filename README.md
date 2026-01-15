@@ -1,23 +1,18 @@
 # Cube in a Box
 
+[![License: EUPL v1.2](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+
 The Cube in a Box is a simple way to run the [Open Data Cube](https://www.opendatacube.org). The current repository is based on [https://github.com/opendatacube/cube-in-a-box](https://github.com/opendatacube/cube-in-a-box) with several modifications (in red in next figure):
 
 ![cube-in-a-box_new_architecture.excalidraw.png](./figures/cube-in-a-box_new_architecture.excalidraw.png)
 
 - Default Jupyter notebook replaced by Jupyterlab
-
 - `sign_url` function added to access data in [Planetary Computer](https://planetarycomputer.microsoft.com/catalog)
-
 - Default source for `Sentinel-2` ([https://earth-search.aws.element84.com/v0/](https://earth-search.aws.element84.com/v0/), slow and unstable) replaced by [Planetary Computer](https://planetarycomputer.microsoft.com/catalog)
-
 - Default ESRI Land Cover source ([io-lulc]([Planetary Computer](https://planetarycomputer.microsoft.com/dataset/io-lulc)), deprecated) replaced by [io-lulc-annual-v02](https://planetarycomputer.microsoft.com/dataset/io-lulc-annual-v02)
-
 - `Landsat Collection 2 Level 2 Science Products` added
-
 - Jupyter notebook modified or created for each available product (they will run only if you run `make setup` without customization)
-
 - [datacube-explorer](https://github.com/opendatacube/datacube-explorer) added and modified to access [Planetary Computer](https://planetarycomputer.microsoft.com/catalog) data (using `sign_url` function)
-
 - `DATETIME` added as `make` argument
 
 ## How to use:
@@ -110,17 +105,130 @@ Once installed, you should be able to run:
 - `docker --version`
 - `docker compose version`
 
-Then proceed with the project commands, for example:
-- Default :`make setup`
-- Switzerland 1 year: `make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31`
-- Switzerland all years (till end 2025, might take a while (~15' in my case): `make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31`
+### 2. Usage
 
-### 2. Usage:
+#### Environment variables
 
-- Jupyterlab is available on [http://localhost/jupyter/](http://localhost/jupyter/) using the password `jupyterpassword` (default)
+This repository uses environment variables to configure the local domain, database credentials, and the Jupyter password.
 
-- Explorer is available on [http://localhost/explorer](http://localhost/explorer) 
+1. Create a `.env` file (Docker Compose reads `.env` by default):
 
-# Specificities
+   ```bash
+   cp .env.default .env
+   ````
+
+2. Edit `.env` to match your setup (especially passwords).
+
+##### Required variables
+
+| Variable           | Required | Default (as provided)  | Example             | Description                                                   |
+| ------------------ | -------: | ---------------------- | ------------------- | ------------------------------------------------------------- |
+| `DOMAIN`           |      Yes | `localhost`            | `localhost`         | Hostname used to access the web endpoints (Jupyter/Explorer). |
+| `POSTGRES_DBNAME`  |      Yes | `opendatacube`         | `opendatacube`      | PostgreSQL database name used by Open Data Cube.              |
+| `POSTGRES_USER`    |      Yes | `opendatacube`         | `opendatacube`      | PostgreSQL user for the Open Data Cube database.              |
+| `POSTGRES_PASS`    |      Yes | `opendatacubepassword` | `a-strong-password` | PostgreSQL password for the Open Data Cube database.          |
+| `JUPYTER_PASSWORD` |      No | `ciab2026`             | `change-me`         | Password for JupyterLab authentication.                       |
+
+#### Using the Open Data Cube via `make`
+
+All interaction with the stack is wrapped behind `make` targets. To see the authoritative list on your machine:
+
+```bash
+make help
+```
+
+##### Command reference (from `make help`)
+
+| Command                | Description                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `make build`           | Build the images locally (dev mode only)                                          |
+| `make build-nocache`   | Build the images locally from scratch (dev mode only, ignores cache)              |
+| `make clean`           | Stop everything and remove containers, volumes, and built images                  |
+| `make down`            | Stop the running services (keeps your data and images)                            |
+| `make help`            | Show available commands                                                           |
+| `make index`           | Index example data for the selected area/time (uses BBOX and DATETIME)            |
+| `make index-parallel`  | Index data using the automated script (recommended)                               |
+| `make index-serie`     | Index data step-by-step (older method; slower)                                    |
+| `make init`            | Initialize the Open Data Cube database (run once after setup)                     |
+| `make logs`            | Show live logs from all services (useful for troubleshooting)                     |
+| `make product`         | Load product definitions into the database (describes available datasets)         |
+| `make pull`            | Download all service images (recommended before first run in prod mode)           |
+| `make purge-data`      | Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1 |
+| `make shell`           | Open a terminal inside the Jupyter container (advanced)                           |
+| `make setup`           | First-time setup (mode-dependent: uses pull in prod, build in dev)                |
+| `make status`          | Show what is running (containers and their status)                                |
+| `make up`              | Start the environment in the background (then open Jupyter in your browser)       |
+| `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                       |
+
+##### Common usage patterns
+
+- First-time setup (default parameters):
+
+  ```bash
+  make setup
+  ```
+
+- Setup with a specific area/time (BBOX, DATETIME):
+ 
+  ```bash
+  # Switzerland 1 year
+  make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
+  
+  # Switzerland all years (till end 2025, might take a while)
+  make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31
+  ```
+
+- Start/stop and troubleshoot:
+
+  ```bash
+  make up
+  make status
+  make logs
+  make down
+  ```
+
+- Reset options (use with care):
+
+  ```bash
+  # Stop everything and remove containers/volumes/images
+  make clean
+  
+  # Irreversible: delete local data in ./data (requires confirmation)
+  make purge-data CONFIRM=1
+  ```
+
+- Dev mode (local builds):
+
+  ```bash
+  # One-off dev invocation
+  make up MODE=dev
+  
+  # Or set dev mode for the entire session
+  export MODE=dev
+  
+  # Build images in dev mode
+  make build MODE=dev
+  make build-nocache MODE=dev
+  ```
+
+#### Access to applications
+
+- JupyterLab is available on: `http://<DOMAIN>/jupyter/` (Password: value of `JUPYTER_PASSWORD` from your `.env`)
+- Explorer is available on: `http://<DOMAIN>/explorer`
+
+## Specificities
 
 - Sentinel 2 indexation requires `archive-less-mature` option in [Makefile](./Makefile) to keep only the most recent version of a given scene, but will trigger an ERROR message (which should be a WARNING as non-blocking).
+
+## Contributing
+
+Contributions are welcome! Feel free to submit PRs or open issues for feature requests.
+
+## License
+
+This project is licensed under the **MIT License**.
+
+**Copyright © 2025 UNIGE/GRID**
+
+You are free to use, modify, and distribute this software under the terms of the MIT License.
+For more details, see the full license text: [MIT](https://opensource.org/license/mit).
