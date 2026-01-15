@@ -1,5 +1,19 @@
-data
+# Data
+data/
+
+# Environment
+.env
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter / notebooks
 .ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
 notebooks/.datacube.conf
 notebooks/.config/
 notebooks/.local/
@@ -7,14 +21,20 @@ notebooks/.cache/
 notebooks/.ipython/
 notebooks/.jupyter/
 notebooks/.python_history
-*.pyc
-notebooks/.cache/
-notebooks/.datacube.conf
-notebooks/.ipynb_checkpoints/
-notebooks/.ipython/
-notebooks/.jupyter/
-notebooks/.local/
 notebooks/.bash_history
-notebooks/.python_history
-.env
-__pycache__
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Runtime outputs
+logs/
+*.log
+tmp/
+.cache/
