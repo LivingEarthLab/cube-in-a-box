@@ -1,54 +1,50 @@
- --extra-index-url https://packages.dea.ga.gov.au/
+--extra-index-url https://packages.dea.ga.gov.au/
+
+# Core dependencies
 aiohttp
 aiobotocore[boto3,awscli]
-pyyaml
-wget
-requests
+click
+dask
 datacube>=1.8.15
+distributed
+# gdal # provided by base image
+geopandas
+matplotlib
+netCDF4
+# numpy # provided by base image
+odc-apps-dc-tools
+odc-cloud[ASYNC]
+odc-dscache
+odc-io
 odc-stac
 odc-stats
-odc-dscache
-odc-cloud[ASYNC]
-odc-ui  # to fix widgets issues
-odc-io
-odc-apps-dc-tools
-dask
-distributed
-# Jupyter components.
-# gdal is provided by base image
-scipy
-# jupyter==1.0.0
-jupyterlab
-ipyleaflet
-folium
+odc-ui # fix widgets issues
 pandas
-# numpy  # Provided by base image
-xarray
-matplotlib
-geopandas
-scikit-image
-tqdm
-click
+planetary-computer
+pystac>=1.6.0 # fix "KeyError: 'proj:epsg'"
 python-dateutil
-netCDF4
+pyyaml
+requests
+rioxarray
+scikit-image
+scipy
+tqdm
+wget
+xarray
 
-# for tests
+# Jupyter components
+dask-labextension
+folium
+ipyleaflet
+ipywidgets
+# jupyter==1.0.0
+jupyter-server-proxy
+jupyterlab
+jupyterlab_widgets
+
+# Testing
 pytest
 testbook
 
-# for Dask dashboard
+# Dask dashboard
 bokeh
-
-# for planetary computer
-planetary-computer
-
-# fix "KeyError: 'proj:epsg'"
-pystac>=1.6.0
-
-rioxarray
-
-jupyterlab_widgets
-ipywidgets
-
-jupyter-server-proxy
-dask-labextension
