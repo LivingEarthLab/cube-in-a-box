@@ -21,10 +21,6 @@
 ##   make up              # production mode (default, uses prebuilt images)
 ##   make up MODE=dev     # dev mode (uses locally built images)
 ##   export MODE=dev      # set dev mode for entire session
-##
-## Dev-only commands (require MODE=dev):
-##   make build MODE=dev          Build images locally
-##   make build-nocache MODE=dev  Build from scratch (no cache)
 
 .PHONY: clean down help index index-parallel index-serie index-sentinel-2-l2a index-io-lulc-annual-v02 \
         index-nasadem index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-sentinel-1-rtc init logs \
@@ -46,6 +42,9 @@ BBOX ?= 25,20,35,30
 # DATETIME=<start_date>/<end_date> e.g. 2021-06-01/2021-07-01
 DATETIME ?= 2021-12-01/2021-12-31
 
+# Current date
+DATE_YYYYMMDD := $(shell date +%Y%m%d)
+
 # Compose project name
 PROJECT ?= cube-in-a-box
 
@@ -63,30 +62,14 @@ else
 endif
 
 # -----------------
-# Dev-only commands
+# Commands
 # -----------------
 
-build: ## Build the images locally (dev mode only)
-ifeq ($(MODE),dev)
-	@$(DC) build --pull
-else
-	@echo "\033[31mError: 'build' is only available in dev mode\033[0m"
-	@echo "Run with: make build MODE=dev"
-	@exit 1
-endif
+build: ## Build the images locally
+	@docker buildx bake dev
 
-build-nocache: ## Build the images locally from scratch (dev mode only, ignores cache)
-ifeq ($(MODE),dev)
-	@$(DC) build --pull --no-cache
-else
-	@echo "\033[31mError: 'build-nocache' is only available in dev mode\033[0m"
-	@echo "Run with: make build-nocache MODE=dev"
-	@exit 1
-endif
-
-# ------------------------------------
-# Shared commands (work in both modes)
-# ------------------------------------
+build-nocache: ## Build the images locally from scratch
+	@docker buildx bake --no-cache dev
 
 clean: ## Stop everything and remove containers, volumes, and built images
 	@$(DC) down --rmi all -v --remove-orphans
@@ -201,10 +184,13 @@ purge-data: down ## Delete local data in ./data (pg and local_data). Irreversibl
 	@echo "This will delete:"
 	@echo "  $(DATA_DIR)/pg/*"
 	@echo "  $(DATA_DIR)/local_data/*"
-	@echo "Re-run with: make purge-data CONFIRM=1"
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
 	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/pg/* /data/local_data/*" || true
 	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
+
+release-push: ## Build and push multi-architecture production images to the configured container registry
+	@echo "Tag: $(DATE_YYYYMMDD)"
+	TAG=$(DATE_YYYYMMDD) docker buildx bake release --push
 
 shell: ## Open a terminal inside the Jupyter container (advanced)
 	@$(DC) exec jupyter bash
