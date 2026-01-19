@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Prefix applied to make targets:
-# - prod: empty (default)
-# - dev:  "dev-"
-MAKE_TARGET_PREFIX="${MAKE_TARGET_PREFIX:-}"
-MODE="${MODE:-}"
-if [[ -n "${MODE}" && "${MODE}" == "dev" ]]; then
-  MAKE_TARGET_PREFIX="dev-"
+# Mode handling:
+# - prod: default
+# - dev:  pass MODE=dev to make
+MODE="${MODE:-prod}"
+if [[ "${MODE}" != "dev" && "${MODE}" != "prod" ]]; then
+  echo "ERROR: MODE must be 'dev' or 'prod' (got: ${MODE})" >&2
+  exit 2
 fi
 
 products=(
@@ -22,21 +22,24 @@ products=(
 
 max_jobs="${MAX_JOBS:-4}"
 
-# Track background PIDs
+# Track background PIDs (Bash 3.2-compatible)
 pids=()
 
 start_job() {
   local product="$1"
-  local target="${MAKE_TARGET_PREFIX}index-${product}"
+  local target="index-${product}"
 
-  echo "$(date) Start processing: ${target}"
+  echo "$(date) Start processing: ${target} (MODE=${MODE})"
   (
-    if make "${target}" >/dev/null 2>&1; then
-      echo "$(date) Successfully completed: ${target}"
+    if [[ "${MODE}" == "dev" ]]; then
+      make "${target}" MODE=dev >/dev/null 2>&1
     else
-      echo "$(date) ERROR processing: ${target}"
+      make "${target}" >/dev/null 2>&1
     fi
-  ) &
+
+    echo "$(date) Successfully completed: ${target} (MODE=${MODE})"
+  ) || echo "$(date) ERROR processing: ${target} (MODE=${MODE})" &
+
   pids+=("$!")
 }
 
@@ -45,8 +48,7 @@ wait_one() {
   local pid="${pids[0]}"
   # wait returns the exit code of that job
   wait "${pid}" || true
-  # Remove first element (Bash 3.2-compatible)
-  pids=("${pids[@]:1}")
+  pids=("${pids[@]:1}")  # Bash 3.2-compatible slice
 }
 
 for product in "${products[@]}"; do
