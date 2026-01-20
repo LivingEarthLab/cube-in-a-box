@@ -1,4 +1,8 @@
 services:
+  postgres:
+    ports:
+      - 5432:5432
+
   jupyter:
     image: cube-in-a-box-jupyter:dev
     pull_policy: never

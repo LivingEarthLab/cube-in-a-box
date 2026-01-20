@@ -49,6 +49,7 @@ services:
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
+      - ODC_DEFAULT_DB_PORT=5432
       - ODC_DEFAULT_DB_USERNAME=${POSTGRES_USER}
       - ODC_DEFAULT_DB_PASSWORD=${POSTGRES_PASS}
       - ODC_DEFAULT_DB_DATABASE=${POSTGRES_DBNAME}
