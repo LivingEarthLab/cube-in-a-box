@@ -7,6 +7,10 @@ services:
     image: cube-in-a-box-jupyter:dev
     pull_policy: never
 
+  jupyterhub:
+    environment:
+      - DOCKER_JUPYTER_IMAGE=cube-in-a-box-jupyter:dev
+
   explorer:
     image: cube-in-a-box-explorer:dev
     pull_policy: never

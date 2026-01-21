@@ -30,19 +30,26 @@ RUN apt-get update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN useradd -m -u 1001 -s /bin/bash jupyter && \
+# Create non-root user (handle conflicts)
+ARG UID=1000
+ARG GID=1000
+RUN if getent passwd ${UID}; then userdel -f $(getent passwd ${UID} | cut -d: -f1); fi && \
+    if getent group ${GID}; then groupdel $(getent group ${GID} | cut -d: -f1); fi && \
+    groupadd -g ${GID} jupyter && \
+    useradd -m -u ${UID} -g jupyter -s /bin/bash jupyter && \
     mkdir -p /notebooks /opt/venv && \
     chown -R jupyter:jupyter /notebooks /opt/venv
 
 # Create virtual environment
 RUN python3 -m venv /opt/venv --system-site-packages
 
-# Copy and install Python dependencies
-COPY --chown=jupyter:jupyter requirements.txt .
+# Copy requirements first for better layer caching
+COPY --chown=jupyter:jupyter requirements.txt /tmp/requirements.txt
+
+# Install Python dependencies
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip3 install --no-cache-dir --requirement requirements.txt && \
-    rm -f requirements.txt
+    pip3 install --no-cache-dir --requirement /tmp/requirements.txt && \
+    rm -f /tmp/requirements.txt
 
 # Switch to non-root user
 USER jupyter

@@ -141,6 +141,7 @@ make help
 
 | Command                | Description                                                                               |
 | ---------------------- | ----------------------------------------------------------------------------------------- |
+| `make backup`          | Create a backup of the PostgreSQL database                                                |
 | `make build`           | Build the images locally                                                                  |
 | `make build-nocache`   | Build the images locally from scratch                                                     |
 | `make clean`           | Stop everything and remove containers, volumes, and built images                          |
@@ -155,11 +156,13 @@ make help
 | `make pull`            | Download all service images (recommended before first run in prod mode)                   |
 | `make purge-data`      | Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1         |
 | `make release-push`    | Build and push multi-architecture production images to the configured container registry  |
+| `make restore`         | Restore PostgreSQL database from a backup file (requires BACKUP_FILE and CONFIRM=1)       |
 | `make shell`           | Open a terminal inside the Jupyter container (advanced)                                   |
 | `make setup`           | First-time setup (mode-dependent: uses pull in prod, build in dev)                        |
 | `make status`          | Show what is running (containers and their status)                                        |
 | `make up`              | Start the environment in the background (then open Jupyter in your browser)               |
 | `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                               |
+
 
 ##### Common usage patterns
 
@@ -214,8 +217,57 @@ make help
 
 #### Access to applications
 
-- JupyterLab is available on: `http://<DOMAIN>/jupyter/` (Password: value of `JUPYTER_PASSWORD` from your `.env`)
+- JupyterHub is available on: `http://<DOMAIN>/jupyter/` (Use NativeAuthenticator for login - admin users defined in `JUPYTERHUB_ADMINS`)
 - Explorer is available on: `http://<DOMAIN>/explorer`
+
+#### Backup and Restore
+
+##### Creating a backup
+
+To create a backup of your PostgreSQL database:
+
+```bash
+make backup
+```
+
+This will create a timestamped SQL dump file in the `./backups` directory (e.g., `./backups/opendatacube_20260121_141530.sql`).
+
+##### Restoring from a backup
+
+To restore a database from a backup file:
+
+```bash
+make restore BACKUP_FILE=./backups/opendatacube_20260121_141530.sql CONFIRM=1
+```
+
+> **⚠️ WARNING**: Restoring will overwrite your current database. Make sure you have a recent backup before proceeding.
+
+##### Volume backup procedures
+
+The following directories contain persistent data and should be backed up regularly:
+
+- `./data/pg/` - PostgreSQL database files
+- `./data/local_data/` - Local data cache
+- `./data/jupyterhub_data/` - JupyterHub configuration and user data
+- User notebooks are stored in Docker volumes named `jupyterhub-user-<username>`
+
+**Manual volume backup:**
+
+```bash
+# Backup user notebooks
+docker run --rm -v jupyterhub-user-<username>:/source -v $(pwd)/backups:/backup alpine tar czf /backup/user-<username>-notebooks.tar.gz -C /source .
+
+# Backup all data directories
+tar czf backups/data-backup-$(date +%Y%m%d).tar.gz ./data/
+```
+
+**Restore user notebooks:**
+
+```bash
+# Restore user notebooks
+docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-<username>-notebooks.tar.gz -C /target
+```
+
 
 ## Specificities
 

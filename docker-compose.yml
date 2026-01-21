@@ -45,7 +45,11 @@ services:
       - backend
 
   jupyter:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260113
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cube-in-a-box-jupyter:local
+    command: ["bash", "-c", "tail -f /dev/null"]
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
@@ -55,43 +59,67 @@ services:
       - ODC_DEFAULT_DB_DATABASE=${POSTGRES_DBNAME}
       - AWS_NO_SIGN_REQUEST=true
       - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
-      - BOKEH_RESOURCES=inline
-      - DASK_DISTRIBUTED__DASHBOARD__LINK=/jupyter/proxy/{port}/status
     depends_on:
       postgres:
-        condition: service_healthy
-      traefik:
         condition: service_healthy
     volumes:
       - ./notebooks:/notebooks
       - ./products:/conf
       - ./data/local_data:/local_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
-    command:
-      - bash
-      - -lc
-      - >
-        jupyter lab
-        --ServerApp.base_url=/jupyter
-        --ServerApp.disable_check_xsrf=True
-        --ServerApp.trust_xheaders=True
-        --ServerApp.allow_remote_access=True
-        --ServerApp.allow_origin='*'
-        --IdentityProvider.token=${JUPYTER_PASSWORD}
-        --ip=0.0.0.0
-        --port=8888
-        --no-browser
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import sys; sys.exit(0)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - backend
+
+  jupyterhub:
+    build:
+      context: hub
+      dockerfile: Dockerfile
+    image: cube-in-a-box-hub
+    container_name: jupyterhub
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/jupyterhub_data:/data
+      - ./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
+    environment:
+      - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS:-admin}
+      - JUPYTERHUB_USERS=${JUPYTERHUB_USERS:-test}
+      - DOCKER_JUPYTER_IMAGE=${DOCKER_JUPYTER_IMAGE:-cube-in-a-box-jupyter:local}
+      - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}-backend
+      - POSTGRES_DBNAME=${POSTGRES_DBNAME}
+      - POSTGRES_PASS=${POSTGRES_PASS}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - HOST_PRODUCTS_DIR=${PWD}/products
+      - HOST_DATA_DIR=${PWD}/data/local_data
+      - HOST_DISTRIBUTED_CONFIG=${PWD}/distributed.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+      traefik:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/jupyter/hub/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
     networks:
       - traefik
       - backend
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.jupyter.rule=Host(`${DOMAIN}`) && PathPrefix(`/jupyter`)"
-      - "traefik.http.routers.jupyter.entrypoints=web"
-      - "traefik.http.routers.jupyter.priority=100"
-      - "traefik.http.routers.jupyter.service=jupyter"
-      - "traefik.http.services.jupyter.loadbalancer.server.port=8888"
+      - "traefik.http.routers.jupyterhub.rule=Host(`${DOMAIN}`) && PathPrefix(`/jupyter`)"
+      - "traefik.http.routers.jupyterhub.entrypoints=web"
+      - "traefik.http.routers.jupyterhub.priority=100"
+      - "traefik.http.routers.jupyterhub.service=jupyterhub"
+      - "traefik.http.services.jupyterhub.loadbalancer.server.port=8000"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
   explorer:
@@ -119,6 +147,12 @@ services:
         condition: service_healthy
     volumes:
       - ./data/local_data:/local_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/explorer/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     restart: unless-stopped
     networks:
       - traefik

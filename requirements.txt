@@ -41,6 +41,7 @@ ipywidgets
 jupyter-server-proxy
 jupyterlab
 jupyterlab_widgets
+jupyterhub
 
 # Testing
 pytest

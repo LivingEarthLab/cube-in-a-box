@@ -7,7 +7,7 @@ variable "REGISTRY" {
 }
 
 variable "TAG" {
-  default = "dev"
+  default = "prod"
 }
 
 group "dev" {
