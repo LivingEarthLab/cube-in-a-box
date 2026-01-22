@@ -1,0 +1,53 @@
+{% extends "page.html" %}
+
+{% block main %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card mt-5">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0">
+                        <i class="fa fa-exclamation-triangle"></i> Signup Not Authorized
+                    </h3>
+                </div>
+                <div class="card-body">
+                    {% if error_message %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ error_message }}
+                    </div>
+                    {% endif %}
+
+                    <div class="alert alert-info" role="alert">
+                        <h4 class="alert-heading">Access Request Required</h4>
+                        <p>
+                            Only pre-authorized users can sign up for this JupyterHub instance.
+                            To request access, please contact the administrator directly.
+                        </p>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>Administrator:</strong> The admin will add your username to the authorized list and
+                            then you can return here to complete signup.
+                        </p>
+                    </div>
+
+                    <div class="mt-4">
+                        <h5>What to do:</h5>
+                        <ol>
+                            <li>Contact the system administrator to request access</li>
+                            <li>Provide your desired username</li>
+                            <li>Wait for the admin to authorize your username</li>
+                            <li>Return to this signup page to create your account</li>
+                        </ol>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="{{base_url}}login" class="btn btn-primary">
+                            <i class="fa fa-arrow-left"></i> Back to Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock main %}

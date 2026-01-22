@@ -117,17 +117,115 @@ This repository uses environment variables to configure the local domain, databa
    cp .env.default .env
    ````
 
-2. Edit `.env` to match your setup (especially passwords).
+2. Edit `.env` to match your setup:
+   - Set strong passwords for `POSTGRES_PASS`
+   - Configure `JUPYTERHUB_ADMINS` with admin usernames
+   - Optionally add regular users to `JUPYTERHUB_USERS`
 
 ##### Required variables
 
-| Variable           | Required | Default (as provided)  | Example             | Description                                                   |
-| ------------------ | -------: | ---------------------- | ------------------- | ------------------------------------------------------------- |
-| `DOMAIN`           |      Yes | `localhost`            | `localhost`         | Hostname used to access the web endpoints (Jupyter/Explorer). |
-| `POSTGRES_DBNAME`  |      Yes | `opendatacube`         | `opendatacube`      | PostgreSQL database name used by Open Data Cube.              |
-| `POSTGRES_USER`    |      Yes | `opendatacube`         | `opendatacube`      | PostgreSQL user for the Open Data Cube database.              |
-| `POSTGRES_PASS`    |      Yes | `opendatacubepassword` | `a-strong-password` | PostgreSQL password for the Open Data Cube database.          |
-| `JUPYTER_PASSWORD` |      No | `ciab2026`             | `change-me`         | Password for JupyterLab authentication.                       |
+| Variable              | Required | Default (as provided)  | Example                    | Description                                                   |
+| --------------------- | -------: | ---------------------- | -------------------------- | ------------------------------------------------------------- |
+| `DOMAIN`              |      Yes | `localhost`            | `localhost`                | Hostname used to access the web endpoints (Jupyter/Explorer). |
+| `POSTGRES_DBNAME`     |      Yes | `opendatacube`         | `opendatacube`             | PostgreSQL database name used by Open Data Cube.              |
+| `POSTGRES_USER`       |      Yes | `opendatacube`         | `opendatacube`             | PostgreSQL user for the Open Data Cube database.              |
+| `POSTGRES_PASS`       |      Yes | `opendatacubepassword` | `a-strong-password`        | PostgreSQL password for the Open Data Cube database.          |
+| `JUPYTERHUB_ADMINS`   |      Yes | (none)                 | `admin,bruno`              | Comma-separated list of JupyterHub admin usernames.           |
+| `JUPYTERHUB_USERS`    |       No | (none)                 | `guest,alice,bob`          | Comma-separated list of authorized non-admin usernames.       |
+
+#### User Management
+
+JupyterHub uses NativeAuthenticator with a custom signup handler that restricts access to pre-authorized users only.
+
+##### How User Authorization Works
+
+1. **Authorized Users**: Only users listed in `JUPYTERHUB_ADMINS` or `JUPYTERHUB_USERS` in the `.env` file can successfully sign up
+2. **Unauthorized Users**: Users not in these lists will see an error message directing them to contact the administrator
+3. **Self-Service Signup**: Authorized users can create their own accounts via the signup page
+4. **Admin Creation**: Administrators can also create user accounts through the JupyterHub admin panel
+
+##### Adding Authorized Users
+
+**Method 1: Via `.env` file (Recommended for initial setup)**
+
+1. Edit the `.env` file:
+   ```bash
+   # Admin users (have full control over JupyterHub)
+   JUPYTERHUB_ADMINS=admin,bruno
+   
+   # Regular users (can only access their own notebooks)
+   JUPYTERHUB_USERS=guest,alice,bob
+   ```
+
+2. Restart JupyterHub to apply changes:
+   ```bash
+   docker-compose restart jupyterhub
+   ```
+
+3. Users can now visit `http://<DOMAIN>/jupyter/hub/signup` to create their accounts
+
+**Method 2: Via JupyterHub Admin Panel (For ad-hoc user additions)**
+
+1. Log in as an admin user
+2. Navigate to `http://<DOMAIN>/jupyter/hub/admin`
+3. Click "Add Users"
+4. Enter the username and click "Add Users"
+5. The user is created immediately and can log in with their password
+
+> **Note**: Users created via the admin panel are automatically authorized and can sign up. However, they won't have admin privileges unless also added to `JUPYTERHUB_ADMINS` in `.env`.
+
+##### User Signup Flow
+
+**For Authorized Users:**
+1. Visit `http://<DOMAIN>/jupyter/hub/signup`
+2. Fill in username (must match one in `.env`), password, and optional email
+3. Submit the form
+4. See success message: "The signup was successful! You can now go to the home page and log in to the system."
+5. Log in at `http://<DOMAIN>/jupyter/hub/login`
+
+**For Unauthorized Users:**
+1. Contact the administrator to be added to `JUPYTERHUB_USERS` in `.env`
+
+##### Managing Existing Users
+
+**View all users:**
+- Log in as admin → Navigate to `http://<DOMAIN>/jupyter/hub/admin`
+- You'll see a list of all users with their status and last activity
+
+**Edit user:**
+- Click "Edit User" next to any user
+- You can make them admin, delete them, or manage their servers
+
+**Delete user:**
+- Click "Edit User" → "Delete User"
+- This removes the user account but doesn't delete their notebook files (stored in `jupyterhub-user-<username>` volume)
+
+##### User Data and Notebooks
+
+Each user's notebooks are stored in a Docker volume named `jupyterhub-user-<username>`. These volumes persist even if the user account is deleted.
+
+**Backup user notebooks:**
+```bash
+docker run --rm -v jupyterhub-user-<username>:/source -v $(pwd)/backups:/backup alpine tar czf /backup/user-<username>-notebooks.tar.gz -C /source .
+```
+
+**Restore user notebooks:**
+```bash
+docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-<username>-notebooks.tar.gz -C /target
+```
+
+**Remove all user volumes:**
+```bash
+make purge-all-users CONFIRM=1
+```
+
+##### Security Best Practices
+
+1. **Use strong passwords** for admin accounts
+2. **Regularly review** the user list in the admin panel
+3. **Remove unused accounts** to minimize security risks
+4. **Backup user data** regularly (see Backup and Restore section)
+5. **Keep `JUPYTERHUB_ADMINS` minimal** - only trusted users should have admin access
 
 #### Using the Open Data Cube via `make`
 

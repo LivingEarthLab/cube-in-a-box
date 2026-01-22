@@ -7,8 +7,10 @@ c.JupyterHub.db_url = 'sqlite:////data/jupyterhub.sqlite'
 c.JupyterHub.cookie_secret_file = '/data/jupyterhub_cookie_secret'
 
 # Authenticator
-from nativeauthenticator import NativeAuthenticator
-c.JupyterHub.authenticator_class = NativeAuthenticator
+import sys
+sys.path.insert(0, '/srv/jupyterhub')
+from custom_authenticator import CustomNativeAuthenticator
+c.JupyterHub.authenticator_class = CustomNativeAuthenticator
 
 # Admin users
 admin_users = set(filter(None, os.environ.get("JUPYTERHUB_ADMINS", "").split(",")))
@@ -19,10 +21,13 @@ allowed_users = set(filter(None, os.environ.get("JUPYTERHUB_USERS", "").split(",
 c.Authenticator.allowed_users = allowed_users.union(admin_users)
 
 # Authenticator settings
+# Enable signup and open_signup so authorized users can sign up immediately
+# Our custom handler will block unauthorized users
 c.NativeAuthenticator.enable_signup = True
-# open_signup = False ensures only users in allowed_users are auto-authorized.
-# Others will be blocked pending admin approval.
-c.NativeAuthenticator.open_signup = False
+c.NativeAuthenticator.open_signup = True
+
+# Custom templates directory for signup page
+c.JupyterHub.template_paths = ['/srv/jupyterhub/templates']
 
 # Spawner
 from dockerspawner import DockerSpawner
