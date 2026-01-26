@@ -41,7 +41,7 @@ ipywidgets
 jupyter-server-proxy
 jupyterlab
 jupyterlab_widgets
-jupyterhub
+jupyterhub==5.4.3
 
 # Testing
 pytest

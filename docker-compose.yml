@@ -1,5 +1,3 @@
-name: cube-in-a-box
-
 services:
   traefik:
     image: traefik:v3.6.6
@@ -41,15 +39,14 @@ services:
       retries: 10
       start_period: 10s
     restart: unless-stopped
+    ports:
+      - 5432:5432
     networks:
       - backend
 
   jupyter:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: cube-in-a-box-jupyter:local
-    command: ["bash", "-c", "tail -f /dev/null"]
+    profiles: [init]
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260126
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
@@ -73,24 +70,20 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    restart: unless-stopped
+    restart: no
     networks:
       - backend
 
   jupyterhub:
-    build:
-      context: hub
-      dockerfile: Dockerfile
-    image: cube-in-a-box-hub
-    container_name: jupyterhub
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-hub:20260126
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
       - ./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
     environment:
-      - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS:-admin}
-      - JUPYTERHUB_USERS=${JUPYTERHUB_USERS:-test}
-      - DOCKER_JUPYTER_IMAGE=${DOCKER_JUPYTER_IMAGE:-cube-in-a-box-jupyter:local}
+      - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS}
+      - JUPYTERHUB_USERS=${JUPYTERHUB_USERS}
+      - DOCKER_JUPYTER_IMAGE=git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260126
       - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}-backend
       - POSTGRES_DBNAME=${POSTGRES_DBNAME}
       - POSTGRES_PASS=${POSTGRES_PASS}
@@ -123,7 +116,7 @@ services:
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
   explorer:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260114
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260126
     environment:
       - POSTGRES_HOSTNAME=postgres
       - PGPORT=5432

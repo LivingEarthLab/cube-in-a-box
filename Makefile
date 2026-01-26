@@ -66,19 +66,20 @@ endif
 # Commands
 # -----------------
 
+backup: ## Create a backup of the PostgreSQL database
+	@mkdir -p ./backups
+	@BACKUP_FILE="./backups/opendatacube_$$(date +%Y%m%d_%H%M%S).sql"; \
+	echo "Creating backup: $$BACKUP_FILE"; \
+	$(DC) exec -T postgres sh -lc \
+		'PGPASSWORD="$$POSTGRES_PASS" pg_dump -h localhost -U "$$POSTGRES_USER" -d "$$POSTGRES_DBNAME"' \
+		> "$$BACKUP_FILE"; \
+	echo "Backup completed: $$BACKUP_FILE"
+
 build: ## Build the images locally
-ifeq ($(MODE),dev)
 	@docker buildx bake dev
-else
-	@$(DC) build jupyter jupyterhub
-endif
 
 build-nocache: ## Build the images locally from scratch
-ifeq ($(MODE),dev)
 	@docker buildx bake --no-cache dev
-else
-	@$(DC) build --no-cache jupyter jupyterhub
-endif
 
 clean: ## Stop everything and remove containers, volumes, and built images
 	@$(DC) down --rmi all -v --remove-orphans
@@ -117,7 +118,7 @@ index-serie: ## Index data step-by-step (older method; slower)
 	         index-sentinel-1-rtc
 
 index-sentinel-2-l2a: # Index Sentinel-2 L2A
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -126,21 +127,21 @@ index-sentinel-2-l2a: # Index Sentinel-2 L2A
 			--rename-product='s2_l2a'"
 
 index-io-lulc-annual-v02: # Index IO LULC Annual v02 (non-fatal if empty)
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='io-lulc-annual-v02'" || true
 
 index-nasadem: # Index NASADEM
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='nasadem'"
 
 index-ls45_c2l2_sp: # Index Landsat 4/5 Collection 2 L2
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) run --rm --profile init bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -150,7 +151,7 @@ index-ls45_c2l2_sp: # Index Landsat 4/5 Collection 2 L2
             --rename-product='ls45_c2l2_sp'"
 
 index-ls7_c2l2_sp: # Index Landsat 7 Collection 2 L2
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -160,7 +161,7 @@ index-ls7_c2l2_sp: # Index Landsat 7 Collection 2 L2
             --rename-product='ls7_c2l2_sp'"
 
 index-ls89_c2l2_sp: # Index Landsat 8/9 Collection 2 L2
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -170,40 +171,37 @@ index-ls89_c2l2_sp: # Index Landsat 8/9 Collection 2 L2
             --rename-product='ls89_c2l2_sp'"
 
 index-sentinel-1-rtc: # Index Sentinel-1 RTC
-	@$(DC) exec -T jupyter bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-1-rtc' \
 			--datetime='$(DATETIME)'"
 
-wait-for-db: ## Wait for PostgreSQL to be ready to accept connections
-	@$(DC) exec postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME}
-
 init: wait-for-db ## Initialize the Open Data Cube database (run once after setup)
-	@$(DC) exec -T jupyter datacube -v system init
+	@$(DC) --profile init run --rm jupyter datacube -v system init
 
 logs: ## Show live logs from all services (useful for troubleshooting)
 	@$(DC) logs --follow
 
 product: ## Load product definitions into the database (describes available datasets)
-	@$(DC) exec -T jupyter bash -lc "datacube product add /conf/*.odc-product.yaml"
+	@$(DC) --profile init run --rm jupyter bash -lc "datacube product add /conf/*.odc-product.yaml"
 
 pull: ## Download all service images (recommended before first run in prod mode)
-	@$(DC) pull --ignore-pull-failures || true
+	@$(DC) pull
 
-purge-all-users: ## Remove all spawned JupyterHub user containers
+purge-user: ## Remove a specific user container and volume (usage: make purge-user HUB_USER=username). Irreversible; requires CONFIRM=1
+	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make purge-user HUB_USER=<username>"; exit 1; fi
+	@echo "Removing container and volume for user: $(HUB_USER)..."
+	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
+	@docker rm -f jupyter-$(HUB_USER) 2>/dev/null || echo "Container jupyter-$(HUB_USER) not found or already removed."
+	@docker volume rm jupyterhub-user-$(HUB_USER) 2>/dev/null || echo "Volume jupyterhub-user-$(HUB_USER) not found or already removed."
+
+purge-users: ## Remove all spawned JupyterHub user containers. Irreversible; requires CONFIRM=1
 	@echo "This will remove spawned user containers and volumes..."
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
 	@docker ps -aq --filter "name=^jupyter-" | xargs -r docker rm -f
 	@docker volume ls -q --filter "name=^jupyterhub-user-" | xargs -r docker volume rm
-
-purge-user: ## Remove a specific user container and volume (usage: make purge-user USER=username)
-	@if [ -z "$(USER)" ]; then echo "Error: USER argument is required. Usage: make purge-user USER=<username>"; exit 1; fi
-	@echo "Removing container and volume for user: $(USER)..."
-	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker rm -f jupyter-$(USER) 2>/dev/null || echo "Container jupyter-$(USER) not found or already removed."
-	@docker volume rm jupyterhub-user-$(USER) 2>/dev/null || echo "Volume jupyterhub-user-$(USER) not found or already removed."
 
 purge-data: down ## Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1
 	@echo "This will delete:"
@@ -218,36 +216,7 @@ release-push: ## Build and push multi-architecture production images to the conf
 	@echo "Tag: $(DATE_YYYYMMDD)"
 	TAG=$(DATE_YYYYMMDD) docker buildx bake release --push
 
-shell: ## Open a terminal inside the Jupyter container (advanced)
-	@$(DC) exec jupyter bash
-
-setup: ## First-time setup (mode-dependent: uses pull in prod, build in dev)
-ifeq ($(MODE),dev)
-	@echo "Setting up dev environment (building images locally)..."
-	@$(MAKE) build up init product index update-explorer
-else
-	@echo "Setting up production environment (building local images + pulling remote)..."
-	@$(MAKE) build
-	@$(MAKE) pull up init product index update-explorer
-endif
-
-status: ## Show what is running (containers and their status)
-	@$(DC) ps
-
-up: ## Start the environment in the background (then open Jupyter in your browser)
-	@$(DC) up -d --remove-orphans --wait --wait-timeout 120
-
-update-explorer: up ## Rebuild the Explorer index so datasets appear in the web UI
-	@$(DC) exec -T explorer cubedash-gen --init --all
-
-backup: ## Create a backup of the PostgreSQL database
-	@mkdir -p ./backups
-	@BACKUP_FILE="./backups/opendatacube_$$(date +%Y%m%d_%H%M%S).sql"; \
-	echo "Creating backup: $$BACKUP_FILE"; \
-	$(DC) exec -T postgres pg_dump -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} > "$$BACKUP_FILE"; \
-	echo "Backup completed: $$BACKUP_FILE"
-
-restore: ## Restore PostgreSQL database from a backup file (usage: make restore BACKUP_FILE=./backups/file.sql)
+restore: ## Restore PostgreSQL database from a backup file (usage: make restore BACKUP_FILE=./backups/file.sql). Irreversible; requires CONFIRM=1
 	@if [ -z "$(BACKUP_FILE)" ]; then \
 		echo "Error: BACKUP_FILE argument is required. Usage: make restore BACKUP_FILE=./backups/file.sql"; \
 		exit 1; \
@@ -259,6 +228,39 @@ restore: ## Restore PostgreSQL database from a backup file (usage: make restore 
 	@echo "Restoring database from: $(BACKUP_FILE)"
 	@echo "WARNING: This will overwrite the current database!"
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@$(DC) exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} < "$(BACKUP_FILE)"
+	@$(DC) exec -T postgres sh -lc '\
+		PGPASSWORD="$$POSTGRES_PASS" psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U "$$POSTGRES_USER" -d postgres \
+		  -c "ALTER DATABASE \"$$POSTGRES_DBNAME\" WITH ALLOW_CONNECTIONS false;" \
+		  -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '\''$$POSTGRES_DBNAME'\'' AND pid <> pg_backend_pid();" \
+		  -c "DROP DATABASE IF EXISTS \"$$POSTGRES_DBNAME\";" \
+		  -c "CREATE DATABASE \"$$POSTGRES_DBNAME\" OWNER \"$$POSTGRES_USER\";" \
+		  -c "ALTER DATABASE \"$$POSTGRES_DBNAME\" WITH ALLOW_CONNECTIONS true;"'
+	@$(DC) exec -T postgres sh -lc \
+		'PGPASSWORD="$$POSTGRES_PASS" psql -v ON_ERROR_STOP=1 -h localhost -U "$$POSTGRES_USER" -d "$$POSTGRES_DBNAME"' \
+		< "$(BACKUP_FILE)"
 	@echo "Restore completed successfully"
 
+setup: ## First-time setup (mode-dependent: uses pull in prod, build in dev)
+ifeq ($(MODE),dev)
+	@echo "Setting up dev environment (building images locally)..."
+	@$(MAKE) build up init product index update-explorer
+else
+	@echo "Setting up production environment (pulling remote images)..."
+	@$(MAKE) pull up init product index update-explorer
+endif
+
+shell: ## Open a terminal inside the Jupyter container (usage: make shell HUB_USER=<username>)
+	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make shell HUB_USER=<username>"; exit 1; fi
+	@docker exec -it jupyter-$(HUB_USER) bash
+
+status: ## Show what is running (containers and their status)
+	@$(DC) ps
+
+up: ## Start the environment in the background (then open Jupyterhub in your browser)
+	@$(DC) up -d --remove-orphans --wait --wait-timeout 120
+
+update-explorer: up ## Rebuild the Explorer index so datasets appear in the web UI
+	@$(DC) exec -T explorer cubedash-gen --init --all
+
+wait-for-db: # Wait for PostgreSQL to be ready to accept connections
+	@$(DC) exec postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME}

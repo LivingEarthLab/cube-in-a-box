@@ -237,29 +237,31 @@ make help
 
 ##### Command reference (from `make help`)
 
-| Command                | Description                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| `make backup`          | Create a backup of the PostgreSQL database                                                |
-| `make build`           | Build the images locally                                                                  |
-| `make build-nocache`   | Build the images locally from scratch                                                     |
-| `make clean`           | Stop everything and remove containers, volumes, and built images                          |
-| `make down`            | Stop the running services (keeps your data and images)                                    |
-| `make help`            | Show available commands                                                                   |
-| `make index`           | Index example data for the selected area/time (uses BBOX and DATETIME)                    |
-| `make index-parallel`  | Index data using the automated script (recommended)                                       |
-| `make index-serie`     | Index data step-by-step (older method; slower)                                            |
-| `make init`            | Initialize the Open Data Cube database (run once after setup)                             |
-| `make logs`            | Show live logs from all services (useful for troubleshooting)                             |
-| `make product`         | Load product definitions into the database (describes available datasets)                 |
-| `make pull`            | Download all service images (recommended before first run in prod mode)                   |
-| `make purge-data`      | Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1         |
-| `make release-push`    | Build and push multi-architecture production images to the configured container registry  |
-| `make restore`         | Restore PostgreSQL database from a backup file (requires BACKUP_FILE and CONFIRM=1)       |
-| `make shell`           | Open a terminal inside the Jupyter container (advanced)                                   |
-| `make setup`           | First-time setup (mode-dependent: uses pull in prod, build in dev)                        |
-| `make status`          | Show what is running (containers and their status)                                        |
-| `make up`              | Start the environment in the background (then open Jupyter in your browser)               |
-| `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                               |
+| Command                | Description                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `make backup`          | Create a backup of the PostgreSQL database                                                 |
+| `make build`           | Build the images locally                                                                   |
+| `make build-nocache`   | Build the images locally from scratch                                                      |
+| `make clean`           | Stop everything and remove containers, volumes, and built images                           |
+| `make down`            | Stop the running services (keeps your data and images)                                     |
+| `make help`            | Show available commands                                                                    |
+| `make index`           | Index example data for the selected area/time (uses BBOX and DATETIME)                     |
+| `make index-parallel`  | Index data using the automated script (recommended)                                        |
+| `make index-serie`     | Index data step-by-step (older method; slower)                                             |
+| `make init`            | Initialize the Open Data Cube database (run once after setup)                              |
+| `make logs`            | Show live logs from all services (useful for troubleshooting)                              |
+| `make product`         | Load product definitions into the database (describes available datasets)                  |
+| `make pull`            | Download all service images (recommended before first run in prod mode)                    |
+| `purge-user`           | Remove a specific user container and volume. Irreversible; requires HUB_USER and CONFIRM=1 | 
+| `purge-users`          | Remove all spawned JupyterHub user containers. Irreversible; requires CONFIRM=1            |
+| `make purge-data`      | Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1          |
+| `make release-push`    | Build and push multi-architecture production images to the configured container registry   |
+| `make restore`         | Restore PostgreSQL database from a backup file (requires BACKUP_FILE and CONFIRM=1)        |
+| `make setup`           | First-time setup (mode-dependent: uses pull in prod, build in dev)                         |
+| `make shell`           | Open a terminal inside the Jupyter container (requires HUB_USER)                           |
+| `make status`          | Show what is running (containers and their status)                                         |
+| `make up`              | Start the environment in the background (then open Jupyter in your browser)                |
+| `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                                |
 
 
 ##### Common usage patterns
