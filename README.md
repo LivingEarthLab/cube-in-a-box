@@ -216,7 +216,12 @@ docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup 
 
 **Remove all user volumes:**
 ```bash
-make purge-all-users CONFIRM=1
+make purge-users CONFIRM=1
+```
+
+**Remove a specific user volume:**
+```Bash
+make purge-user HUB_USER=alice CONFIRM=1
 ```
 
 ##### Security Best Practices
@@ -299,6 +304,11 @@ make help
   
   # Irreversible: delete local data in ./data (requires confirmation)
   make purge-data CONFIRM=1
+
+  # ⚠️ TOTAL WIPE OUT (USE WITH EXTRA CARE !!!)
+  make clean && make purge-data CONFIRM=1 && make purge-users CONFIRM=1
+  # then check eventual remains
+  docker ps -a && docker images -a && docker volume ls && ls -la ./data
   ```
 
 - Dev mode (local builds):
@@ -319,6 +329,26 @@ make help
 
 - JupyterHub is available on: `http://<DOMAIN>/jupyter/` (Use NativeAuthenticator for login - admin users defined in `JUPYTERHUB_ADMINS`)
 - Explorer is available on: `http://<DOMAIN>/explorer`
+
+#### Shared Directory
+
+This directory is shared among users of the JupyterHub instance.
+
+##### Purpose
+The primary purpose of this folder is to facilitate file sharing and collaboration between users. Any file or directory placed in this folder is accessible to other users who have access to the shared volume in Read Only mode (to make it clear `_ReadOnly` is appended to the directory name). In other words `.ipynb` can be edited and executed by other users, but not overwritten.
+
+##### Editing and saving shared folders and files
+Files and folders can by copy/pasted manually to a different directory. Or with commands such as:
+- `cp -rL notebooks_demo_ReadOnly ../notebooks_demo`
+- `cp -L ./anyuser/Anyname.ipynb ../AnyName.ipynb`.
+
+In case user is admin, it might have to change user and group using `chown` command:
+- `chown -R jupyter:jupyter ../notebooks_demo`
+- `chown jupyter:jupyter AnyName.ipynb`
+
+##### Important Notes
+- **Visibility**: Content in this folder is visible to all users with access to the shared mount.
+- **Data Safety**: Do not place sensitive credentials or private data in this directory.
 
 #### Backup and Restore
 
@@ -367,15 +397,6 @@ tar czf backups/data-backup-$(date +%Y%m%d).tar.gz ./data/
 # Restore user notebooks
 docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-<username>-notebooks.tar.gz -C /target
 ```
-
-
-## Specificities
-
-- Sentinel 2 indexation requires `archive-less-mature` option in [Makefile](./Makefile) to keep only the most recent version of a given scene, but will trigger an ERROR message (which should be a WARNING as non-blocking).
-
-## Contributing
-
-Contributions are welcome! Feel free to submit PRs or open issues for feature requests.
 
 ## License
 

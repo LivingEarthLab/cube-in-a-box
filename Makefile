@@ -194,22 +194,23 @@ purge-user: ## Remove a specific user container and volume (usage: make purge-us
 	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make purge-user HUB_USER=<username>"; exit 1; fi
 	@echo "Removing container and volume for user: $(HUB_USER)..."
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker rm -f jupyter-$(HUB_USER) 2>/dev/null || echo "Container jupyter-$(HUB_USER) not found or already removed."
+	@docker rm -f jupyterhub-$(HUB_USER) 2>/dev/null || echo "Container jupyterhub-$(HUB_USER) not found or already removed."
 	@docker volume rm jupyterhub-user-$(HUB_USER) 2>/dev/null || echo "Volume jupyterhub-user-$(HUB_USER) not found or already removed."
 
 purge-users: ## Remove all spawned JupyterHub user containers. Irreversible; requires CONFIRM=1
 	@echo "This will remove spawned user containers and volumes..."
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker ps -aq --filter "name=^jupyter-" | xargs -r docker rm -f
+	@docker ps -aq --filter "name=^jupyterhub-" | xargs -r docker rm -f
 	@docker volume ls -q --filter "name=^jupyterhub-user-" | xargs -r docker volume rm
 
 purge-data: down ## Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1
 	@echo "This will delete:"
-	@echo "  $(DATA_DIR)/pg/*"
-	@echo "  $(DATA_DIR)/local_data/*"
 	@echo "  $(DATA_DIR)/jupyterhub_data/*"
+	@echo "  $(DATA_DIR)/local_data/*"
+	@echo "  $(DATA_DIR)/pg/*"
+	@echo "  $(DATA_DIR)/shared/*"
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/pg/* /data/local_data/* /data/jupyterhub_data/*" || true
+	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/jupyterhub_data/* /data/local_data/* /data/pg/* /data/shared/*" || true
 	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
 
 release-push: ## Build and push multi-architecture production images to the configured container registry
@@ -251,7 +252,7 @@ endif
 
 shell: ## Open a terminal inside the Jupyter container (usage: make shell HUB_USER=<username>)
 	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make shell HUB_USER=<username>"; exit 1; fi
-	@docker exec -it jupyter-$(HUB_USER) bash
+	@docker exec -it jupyterhub-$(HUB_USER) bash
 
 status: ## Show what is running (containers and their status)
 	@$(DC) ps

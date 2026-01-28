@@ -15,7 +15,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      test: [ "CMD", "traefik", "healthcheck", "--ping" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -33,7 +33,7 @@ services:
     volumes:
       - ./data/pg:/var/lib/postgresql/
     healthcheck:
-      test: ["CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p 5432"]
+      test: [ "CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p 5432" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -45,7 +45,7 @@ services:
       - backend
 
   jupyter:
-    profiles: [init]
+    profiles: [ init ]
     image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260126
     init: true
     environment:
@@ -60,12 +60,11 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./notebooks:/notebooks
       - ./products:/conf
       - ./data/local_data:/local_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
     healthcheck:
-      test: ["CMD", "python3", "-c", "import sys; sys.exit(0)"]
+      test: [ "CMD", "python3", "-c", "import sys; sys.exit(0)" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -80,6 +79,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
       - ./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
+      - ./data/shared:/shared
     environment:
       - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS}
       - JUPYTERHUB_USERS=${JUPYTERHUB_USERS}
@@ -91,13 +91,17 @@ services:
       - HOST_PRODUCTS_DIR=${PWD}/products
       - HOST_DATA_DIR=${PWD}/data/local_data
       - HOST_DISTRIBUTED_CONFIG=${PWD}/distributed.yaml
+      - HOST_NOTEBOOKS_DIR=${PWD}/notebooks_demo
+      - HOST_SHARED_DIR=${PWD}/data/shared
+      - HOST_SHARED_README=${PWD}/shared_README.md
+      - CONTAINER_SHARED_DIR=/shared
     depends_on:
       postgres:
         condition: service_healthy
       traefik:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/jupyter/hub/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/jupyter/hub/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -141,7 +145,7 @@ services:
     volumes:
       - ./data/local_data:/local_data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/explorer/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/explorer/" ]
       interval: 10s
       timeout: 5s
       retries: 5
