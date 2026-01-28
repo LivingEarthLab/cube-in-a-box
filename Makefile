@@ -83,6 +83,7 @@ build-nocache: ## Build the images locally from scratch
 
 clean: ## Stop everything and remove containers, volumes, and built images
 	@$(DC) down --rmi all -v --remove-orphans
+	@$(DC) --profile init down --rmi all -v --remove-orphans
 
 down: ## Stop the running services (keeps your data and images)
 	@$(DC) down --remove-orphans
@@ -190,18 +191,22 @@ product: ## Load product definitions into the database (describes available data
 pull: ## Download all service images (recommended before first run in prod mode)
 	@$(DC) pull
 
-purge-user: ## Remove a specific user container and volume (usage: make purge-user HUB_USER=username). Irreversible; requires CONFIRM=1
+purge-user: ## Remove a specific user container, volume and shared data (usage: make purge-user HUB_USER=username). Irreversible; requires CONFIRM=1
 	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make purge-user HUB_USER=<username>"; exit 1; fi
-	@echo "Removing container and volume for user: $(HUB_USER)..."
+	@echo "Removing container, volume and shared data for user: $(HUB_USER)..."
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker rm -f jupyterhub-$(HUB_USER) 2>/dev/null || echo "Container jupyterhub-$(HUB_USER) not found or already removed."
+	@docker rm -f jupyter-$(HUB_USER) 2>/dev/null || echo "Container jupyter-$(HUB_USER) not found or already removed."
 	@docker volume rm jupyterhub-user-$(HUB_USER) 2>/dev/null || echo "Volume jupyterhub-user-$(HUB_USER) not found or already removed."
+	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/shared/$(HUB_USER)" || true
+	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
 
-purge-users: ## Remove all spawned JupyterHub user containers. Irreversible; requires CONFIRM=1
-	@echo "This will remove spawned user containers and volumes..."
+purge-users: ## Remove all spawned JupyterHub user containers, volumes and shared data. Irreversible; requires CONFIRM=1
+	@echo "This will remove spawned user containers, volumes and shared data..."
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker ps -aq --filter "name=^jupyterhub-" | xargs -r docker rm -f
+	@docker ps -aq --filter "name=^jupyter-" | xargs -r docker rm -f
 	@docker volume ls -q --filter "name=^jupyterhub-user-" | xargs -r docker volume rm
+	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/shared/*" || true
+	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
 
 purge-data: down ## Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1
 	@echo "This will delete:"
@@ -252,7 +257,7 @@ endif
 
 shell: ## Open a terminal inside the Jupyter container (usage: make shell HUB_USER=<username>)
 	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make shell HUB_USER=<username>"; exit 1; fi
-	@docker exec -it jupyterhub-$(HUB_USER) bash
+	@docker exec -it jupyter-$(HUB_USER) bash
 
 status: ## Show what is running (containers and their status)
 	@$(DC) ps
