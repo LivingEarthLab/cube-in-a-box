@@ -93,7 +93,6 @@ services:
       - HOST_DISTRIBUTED_CONFIG=${PWD}/distributed.yaml
       - HOST_NOTEBOOKS_DIR=${PWD}/notebooks_demo
       - HOST_SHARED_DIR=${PWD}/data/shared
-      - HOST_SHARED_README=${PWD}/shared_README.md
       - CONTAINER_SHARED_DIR=/shared
     depends_on:
       postgres:

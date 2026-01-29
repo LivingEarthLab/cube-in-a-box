@@ -55,68 +55,63 @@ def pre_spawn_hook(spawner):
         except Exception as e:
             print(f"Warning: Could not set ownership on {user_shared_path}: {e}")
 
+
     
     # Add shared folder volumes to spawner
-    # Strategy: Separate mounts for RO pool and RW user folder to avoid overlay conflicts
+    # Strategy: Mount subdirectories with appropriate permissions
+    
     notebooks_dir = os.environ.get("HOST_NOTEBOOKS_DIR", "")
     if notebooks_dir:
-        spawner.volumes[notebooks_dir] = {"bind": "/mnt/notebooks_demo", "mode": "ro"}
+        spawner.volumes[notebooks_dir] = {"bind": "/notebooks/shared/notebooks_demo", "mode": "ro"}
     
     if host_shared_dir:
-        # 1. Mount entire shared directory as read-only base
-        spawner.volumes[host_shared_dir] = {"bind": "/mnt/shared_data", "mode": "ro"}
+        # Mount entire shared directory as read-only to /notebooks/shared/all_users
+        spawner.volumes[host_shared_dir] = {"bind": "/notebooks/shared/all_users", "mode": "ro"}
         
-        # 2. Mount user's own folder as Read-Write to a separate location
+        # Mount user's own folder as Read-Write, overlaying their folder in the shared view
         user_host_shared_path = os.path.join(host_shared_dir, username)
-        spawner.volumes[user_host_shared_path] = {"bind": "/mnt/my_shared_data", "mode": "rw"}
-
-    if host_shared_readme:
-        spawner.volumes[host_shared_readme] = {"bind": "/mnt/shared_README.md", "mode": "ro"}
-
-
+        spawner.volumes[user_host_shared_path] = {"bind": f"/notebooks/shared/all_users/{username}", "mode": "rw"}
     
-    # Startup script with background loop to refresh symlinks
-    # 1. Create structure
-    # 2. Link my folder (RW) and notebooks (RO)
-    # 3. Start background loop to link other users' folders (RO) from the shared pool
-    #    This ensures new users become visible without restart
+    # Startup script to create instruction file and set permissions
+    # We create this BEFORE making the directory read-only
     script = f"""
-    mkdir -p /notebooks/shared
-    chown jupyter:jupyter /notebooks/shared
+    # Create the instruction file in /notebooks/shared/ before making it read-only
+    cat > /notebooks/shared/HOW_TO_USE_SHARED_FOLDERS.txt << 'EOF'
+SHARED FOLDER USAGE
+===================
+
+📁 Structure:
+  /notebooks/shared/
+    ├── all_users/          (Browse all users' shared folders)
+    │   ├── user1/          (Read/Write for user1, Read-Only for others)
+    │   ├── user2/          (Read/Write for user2, Read-Only for others)
+    │   └── user3/          (Read/Write for user3, Read-Only for others)
+    ├── notebooks_demo/     (Demo notebooks - Read Only)
+
+✅ You CAN:
+  - Read all folders in all_users/
+  - Write ONLY in all_users/YOUR_USERNAME/
+
+❌ You CANNOT:
+  - Write in other users' folders (read-only mount)
+  - Write in the notebooks_demo folder (read-only mount)
+  - Create NEW files/folders directly in /notebooks/shared/ (read-only after startup)
+
+💡 Tip: To share files with others, put them in all_users/YOUR_USERNAME/
+
+📝 To edit a file or folder you need to copy it to the main /notebooks folder by either
+  - manually copy/paste file(s) or folder
+  - or use command: cp -R ./notebooks_demo/ ../notebooks`
+EOF
     
-    # Static links
-    ln -sf /mnt/notebooks_demo /notebooks/shared/notebooks_demo_ReadOnly
-    ln -sf /mnt/my_shared_data /notebooks/shared/{username}
-    ln -sf /mnt/shared_README.md /notebooks/shared/README.md
+    chmod 444 /notebooks/shared/HOW_TO_USE_SHARED_FOLDERS.txt
     
-    # Function to update links (runs in background)
-    update_links() {{
-        while true; do
-            for dir in /mnt/shared_data/*/; do
-                if [ -d "$dir" ]; then
-                    user_dir=$(basename "$dir")
-                    if [ "$user_dir" != "{username}" ] && [ "$user_dir" != "README.md" ]; then
-                        # Link if not exists
-                        # Use bash bracing for variable expansion to safely append _ReadOnly    
-                        # In Python f-string, we must double the braces {{ }} to get literal {{ }}
-                        if [ ! -e "/notebooks/shared/${{user_dir}}_ReadOnly" ]; then
-                            ln -sf "$dir" "/notebooks/shared/${{user_dir}}_ReadOnly"
-                        fi
-                    fi
-                fi
-            done
-            sleep 30
-        done
-    }}
-    
-    export -f update_links
-    bash -c update_links &
+    # Make /notebooks/shared read-only (chmod won't stop root, but documents intent)
+    chmod 555 /notebooks/shared
     
     exec jupyterhub-singleuser "$@"
     """
     
-    # Simplify command to run the script
-    # We use a trick to pass the script as an argument to bash -c
     spawner.cmd = ["bash", "-c", script, "--"]
     
     # Grant root privileges to admin users
