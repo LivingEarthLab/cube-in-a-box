@@ -1,0 +1,29 @@
+SHARED FOLDER USAGE
+===================
+
+📁 Structure:
+  /notebooks/shared/
+    ├── all_users/                    (Browse all users' shared folders)
+    │   ├── user1/                    (Read/Write for user1, Read-Only for others)
+    │   ├── user2/                    (Read/Write for user2, Read-Only for others)
+    │   └── user3/                    (Read/Write for user3, Read-Only for others)
+    ├── HOW_TO_USE_SHARED_FOLDERS.txt (Documentation - Read Only)
+    └── notebooks_demo/               (Demo notebooks - Read Only)
+
+✅ You CAN:
+  - Read all folders in all_users/
+  - Write ONLY in all_users/YOUR_USERNAME/
+
+❌ You CANNOT:
+  - Write in other users' folders (read-only mount)
+  - Write in the notebooks_demo folder (read-only mount)
+  - Create NEW files/folders directly in /notebooks/shared/ (read-only filesystem)
+
+💡 Tip: To share files with others, put them in all_users/YOUR_USERNAME/
+
+📝 To edit a file or folder you need to copy it to the main /notebooks folder by either:
+  - Manually copy/paste file(s) or folder
+  - Or use command: cp -R ./shared/notebooks_demo/ ../my_work/
+
+⚠️  IMPORTANT: The /notebooks/shared/ root directory is read-only for ALL users,
+         including administrators. This ensures proper organization of shared content.

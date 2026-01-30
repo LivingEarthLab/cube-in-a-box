@@ -39,86 +39,77 @@ c.DockerSpawner.cmd = ["jupyterhub-singleuser"]
 
 def pre_spawn_hook(spawner):
     """Grant root privileges to admin users and setup shared folders."""
-    # Create user's shared folder if it doesn't exist
     username = spawner.user.name
-    host_shared_dir = os.environ.get("HOST_SHARED_DIR", "")
-    host_shared_readme = os.environ.get("HOST_SHARED_README", "")
-    container_shared_dir = os.environ.get("CONTAINER_SHARED_DIR", "")
     
-    # Create user directory in the container's mounted shared folder
-    if container_shared_dir:
-        user_shared_path = os.path.join(container_shared_dir, username)
-        os.makedirs(user_shared_path, exist_ok=True)
+    # Get environment variables for HOST paths (used for mounting in user containers)
+    host_shared_static = os.environ.get("HOST_SHARED_STATIC", "")  # ./shared on host
+    host_user_folders = os.environ.get("HOST_USER_FOLDERS", "")    # ./data/shared on host
+    
+    # Container paths (where these directories are mounted in THIS jupyterhub container)
+    container_shared_static = "/shared_static"  # ./shared mounted here
+    container_user_folders = "/shared_users"    # ./data/shared mounted here
+    
+    # Create user's shared folder in ./data/shared/{username} if it doesn't exist
+    if os.path.exists(container_user_folders):
+        user_folder_path = os.path.join(container_user_folders, username)
+        os.makedirs(user_folder_path, exist_ok=True)
+        
         # Set ownership to jupyter:jupyter (UID 1000:GID 100) so non-admin users can write
         try:
-            os.chown(user_shared_path, 1000, 100)
+            os.chown(user_folder_path, 1000, 100)
+            os.chmod(user_folder_path, 0o755)  # rwxr-xr-x
         except Exception as e:
-            print(f"Warning: Could not set ownership on {user_shared_path}: {e}")
-
-
+            print(f"Warning: Could not set ownership/permissions on {user_folder_path}: {e}")
     
-    # Add shared folder volumes to spawner
-    # Strategy: Mount subdirectories with appropriate permissions
+    # Mount strategy to create the structure described in HOW_TO_USE_SHARED_FOLDERS.txt:
+    # /notebooks/shared/
+    #   ├── all_users/          (from ./data/shared)
+    #   │   ├── user1/          (read-write for user1, read-only for others)
+    #   │   └── user2/          (read-write for user2, read-only for others)
+    #   ├── notebooks_demo/     (from ./shared/notebooks_demo - read-only)
+    #   ├── HOW_TO_USE_SHARED_FOLDERS.txt (from ./shared - read-only)
+    #   └── README.md           (from ./shared/README.md - read-only)
     
-    notebooks_dir = os.environ.get("HOST_NOTEBOOKS_DIR", "")
-    if notebooks_dir:
-        spawner.volumes[notebooks_dir] = {"bind": "/notebooks/shared/notebooks_demo", "mode": "ro"}
-    
-    if host_shared_dir:
-        # Mount entire shared directory as read-only to /notebooks/shared/all_users
-        spawner.volumes[host_shared_dir] = {"bind": "/notebooks/shared/all_users", "mode": "ro"}
+    # Mount static content from ./shared/ individually to avoid parent/child mount conflicts
+    # Check existence using container paths, but mount using host paths
+    if host_shared_static:
+        # Mount notebooks_demo if it exists
+        notebooks_demo_container = os.path.join(container_shared_static, "notebooks_demo")
+        if os.path.exists(notebooks_demo_container):
+            notebooks_demo_host = os.path.join(host_shared_static, "notebooks_demo")
+            spawner.volumes[notebooks_demo_host] = {"bind": "/notebooks/shared/notebooks_demo", "mode": "ro"}
         
-        # Mount user's own folder as Read-Write, overlaying their folder in the shared view
-        user_host_shared_path = os.path.join(host_shared_dir, username)
-        spawner.volumes[user_host_shared_path] = {"bind": f"/notebooks/shared/all_users/{username}", "mode": "rw"}
+        # Mount README.md if it exists
+        readme_container = os.path.join(container_shared_static, "README.md")
+        if os.path.exists(readme_container):
+            readme_host = os.path.join(host_shared_static, "README.md")
+            spawner.volumes[readme_host] = {"bind": "/notebooks/shared/README.md", "mode": "ro"}
+        
+        # Mount HOW_TO_USE_SHARED_FOLDERS.txt if it exists
+        howto_container = os.path.join(container_shared_static, "HOW_TO_USE_SHARED_FOLDERS.txt")
+        if os.path.exists(howto_container):
+            howto_host = os.path.join(host_shared_static, "HOW_TO_USE_SHARED_FOLDERS.txt")
+            spawner.volumes[howto_host] = {"bind": "/notebooks/shared/HOW_TO_USE_SHARED_FOLDERS.txt", "mode": "ro"}
     
-    # Startup script to create instruction file and set permissions
-    # We create this BEFORE making the directory read-only
-    script = f"""
-    # Create the instruction file in /notebooks/shared/ before making it read-only
-    cat > /notebooks/shared/HOW_TO_USE_SHARED_FOLDERS.txt << 'EOF'
-SHARED FOLDER USAGE
-===================
-
-📁 Structure:
-  /notebooks/shared/
-    ├── all_users/          (Browse all users' shared folders)
-    │   ├── user1/          (Read/Write for user1, Read-Only for others)
-    │   ├── user2/          (Read/Write for user2, Read-Only for others)
-    │   └── user3/          (Read/Write for user3, Read-Only for others)
-    ├── notebooks_demo/     (Demo notebooks - Read Only)
-
-✅ You CAN:
-  - Read all folders in all_users/
-  - Write ONLY in all_users/YOUR_USERNAME/
-
-❌ You CANNOT:
-  - Write in other users' folders (read-only mount)
-  - Write in the notebooks_demo folder (read-only mount)
-  - Create NEW files/folders directly in /notebooks/shared/ (read-only after startup)
-
-💡 Tip: To share files with others, put them in all_users/YOUR_USERNAME/
-
-📝 To edit a file or folder you need to copy it to the main /notebooks folder by either
-  - manually copy/paste file(s) or folder
-  - or use command: cp -R ./notebooks_demo/ ../notebooks`
-EOF
+    # Mount user folders from ./data/shared at /notebooks/shared/all_users
+    if host_user_folders and os.path.exists(container_user_folders):
+        # Mount all_users directory as read-only
+        spawner.volumes[host_user_folders] = {"bind": "/notebooks/shared/all_users", "mode": "ro"}
+        
+        # Mount current user's own folder as read-write (overlays the read-only mount)
+        user_folder_container = os.path.join(container_user_folders, username)
+        if os.path.exists(user_folder_container):
+            user_folder_host = os.path.join(host_user_folders, username)
+            spawner.volumes[user_folder_host] = {"bind": f"/notebooks/shared/all_users/{username}", "mode": "rw"}
     
-    chmod 444 /notebooks/shared/HOW_TO_USE_SHARED_FOLDERS.txt
-    
-    # Make /notebooks/shared read-only (chmod won't stop root, but documents intent)
-    chmod 555 /notebooks/shared
-    
-    exec jupyterhub-singleuser "$@"
-    """
-    
-    spawner.cmd = ["bash", "-c", script, "--"]
-    
-    # Grant root privileges to admin users
+    # Grant sudo privileges to admin users
+    # IMPORTANT: We do NOT run admins as root (user: '0') because that would allow them
+    # to bypass read-only mount restrictions. Instead, we give them sudo access while
+    # running as the jupyter user (UID 1000), which respects the ro mounts.
     if spawner.user.admin:
-        spawner.extra_create_kwargs = {'user': '0'}
-        spawner.environment.update({'GRANT_SUDO': 'yes'})
-        spawner.args = ["--allow-root"]
+        spawner.environment.update({'GRANT_SUDO': 'yes', 'NB_UID': '1000', 'NB_GID': '100'})
+        # Note: We do NOT set spawner.extra_create_kwargs['user'] = '0'
+        # This keeps them as jupyter user but with sudo access
 
 
 

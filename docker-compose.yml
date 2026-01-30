@@ -79,7 +79,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
       - ./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
-      - ./data/shared:/shared
+      - ./shared:/shared_static:ro
+      - ./data/shared:/shared_users
     environment:
       - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS}
       - JUPYTERHUB_USERS=${JUPYTERHUB_USERS}
@@ -91,9 +92,10 @@ services:
       - HOST_PRODUCTS_DIR=${PWD}/products
       - HOST_DATA_DIR=${PWD}/data/local_data
       - HOST_DISTRIBUTED_CONFIG=${PWD}/distributed.yaml
-      - HOST_NOTEBOOKS_DIR=${PWD}/notebooks_demo
-      - HOST_SHARED_DIR=${PWD}/data/shared
-      - CONTAINER_SHARED_DIR=/shared
+      # Static shared content: notebooks_demo, README.md, etc.
+      - HOST_SHARED_STATIC=${PWD}/shared
+      # User-specific folders stored in ./data/shared but mounted at /notebooks/shared/all_users
+      - HOST_USER_FOLDERS=${PWD}/data/shared
     depends_on:
       postgres:
         condition: service_healthy

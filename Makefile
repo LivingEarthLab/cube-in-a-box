@@ -198,7 +198,7 @@ purge-user: ## Remove a specific user container, volume and shared data (usage: 
 	@docker rm -f jupyter-$(HUB_USER) 2>/dev/null || echo "Container jupyter-$(HUB_USER) not found or already removed."
 	@docker volume rm jupyterhub-user-$(HUB_USER) 2>/dev/null || echo "Volume jupyterhub-user-$(HUB_USER) not found or already removed."
 	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/shared/$(HUB_USER)" || true
-	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
+# 	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
 
 purge-users: ## Remove all spawned JupyterHub user containers, volumes and shared data. Irreversible; requires CONFIRM=1
 	@echo "This will remove spawned user containers, volumes and shared data..."
@@ -206,7 +206,7 @@ purge-users: ## Remove all spawned JupyterHub user containers, volumes and share
 	@docker ps -aq --filter "name=^jupyter-" | xargs -r docker rm -f
 	@docker volume ls -q --filter "name=^jupyterhub-user-" | xargs -r docker volume rm
 	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/shared/*" || true
-	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
+# 	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
 
 purge-data: down ## Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1
 	@echo "This will delete:"
@@ -216,7 +216,7 @@ purge-data: down ## Delete local data in ./data (pg and local_data). Irreversibl
 	@echo "  $(DATA_DIR)/shared/*"
 	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
 	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/jupyterhub_data/* /data/local_data/* /data/pg/* /data/shared/*" || true
-	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
+# 	@docker image rm alpine:3.23.2 >/dev/null 2>&1 || true
 
 release-push: ## Build and push multi-architecture production images to the configured container registry
 	@echo "Tag: $(DATE_YYYYMMDD)"
