@@ -247,11 +247,33 @@ restore: ## Restore PostgreSQL database from a backup file (usage: make restore 
 	@echo "Restore completed successfully"
 
 setup: ## First-time setup (mode-dependent: uses pull in prod, build in dev)
+	@if [ ! -f .env ]; then \
+		echo "Error: .env file not found!"; \
+		echo "Please create a .env file before running setup."; \
+		echo "You can use .env.example as a template if available."; \
+		exit 1; \
+	fi
 ifeq ($(MODE),dev)
-	@echo "Setting up dev environment (building images locally)..."
+	@echo ""
+	@echo "╔═══════════════════════════════════════╗"
+	@echo "║                                       ║"
+	@echo "║         🛠️  DEV MODE SETUP 🛠️          ║"
+	@echo "║                                       ║"
+	@echo "║   Building images locally...          ║"
+	@echo "║                                       ║"
+	@echo "╚═══════════════════════════════════════╝"
+	@echo ""
 	@$(MAKE) build up init product index update-explorer
 else
-	@echo "Setting up production environment (pulling remote images)..."
+	@echo ""
+	@echo "╔═══════════════════════════════════════╗"
+	@echo "║                                       ║"
+	@echo "║      🚀 PRODUCTION MODE SETUP 🚀      ║"
+	@echo "║                                       ║"
+	@echo "║   Pulling remote images...            ║"
+	@echo "║                                       ║"
+	@echo "╚═══════════════════════════════════════╝"
+	@echo ""
 	@$(MAKE) pull up init product index update-explorer
 endif
 
