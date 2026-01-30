@@ -146,7 +146,7 @@ c.DockerSpawner.environment = {
     "AWS_NO_SIGN_REQUEST": "true",
     "STAC_API_URL": "https://explorer.sandbox.dea.ga.gov.au/stac/",
     "BOKEH_RESOURCES": "inline",
-    "DASK_DISTRIBUTED__DASHBOARD__LINK": "/user/{username}/proxy/{port}/status",
+    "DASK_DISTRIBUTED__DASHBOARD__LINK": "/jupyter/user/{JUPYTERHUB_USER}/proxy/{port}/status",
 }
 
 # Networking
