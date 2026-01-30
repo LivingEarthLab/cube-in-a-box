@@ -43,23 +43,34 @@ start_job() {
   pids+=("$!")
 }
 
-# Wait for the oldest PID in the queue, then shift the queue
-wait_one() {
-  local pid="${pids[0]}"
-  # wait returns the exit code of that job
-  wait "${pid}" || true
-  pids=("${pids[@]:1}")  # Bash 3.2-compatible slice
+# Check running PIDs and remove finished ones from the list
+check_jobs() {
+  local new_pids=()
+  for pid in "${pids[@]}"; do
+    if kill -0 "${pid}" 2>/dev/null; then
+      new_pids+=("${pid}")
+    fi
+  done
+  pids=("${new_pids[@]}")
+}
+
+# Wait until there is at least one free slot
+wait_for_free_slot() {
+  while true; do
+    check_jobs
+    if [[ "${#pids[@]}" -lt "${max_jobs}" ]]; then
+      return
+    fi
+    sleep 1
+  done
 }
 
 for product in "${products[@]}"; do
-  # If we're at max capacity, wait for one job to finish
-  while [[ "${#pids[@]}" -ge "${max_jobs}" ]]; do
-    wait_one
-  done
+  wait_for_free_slot
   start_job "${product}"
 done
 
 # Wait for remaining jobs
-while [[ "${#pids[@]}" -gt 0 ]]; do
-  wait_one
+for pid in "${pids[@]}"; do
+  wait "${pid}" || true
 done
