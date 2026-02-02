@@ -20,9 +20,11 @@ products=(
   sentinel-1-rtc
 )
 
-max_jobs="${MAX_JOBS:-4}"
+# Hardcoded parallelism
+max_jobs=4
 
-# Track background PIDs (Bash 3.2-compatible)
+# Ensure pids is always a defined array even under `set -u`
+declare -a pids
 pids=()
 
 start_job() {
@@ -45,13 +47,14 @@ start_job() {
 
 # Check running PIDs and remove finished ones from the list
 check_jobs() {
-  local new_pids=()
-  for pid in "${pids[@]}"; do
+  local -a new_pids=()
+  local pid
+  for pid in "${pids[@]:-}"; do
     if kill -0 "${pid}" 2>/dev/null; then
       new_pids+=("${pid}")
     fi
   done
-  pids=("${new_pids[@]}")
+  pids=("${new_pids[@]:-}")
 }
 
 # Wait until there is at least one free slot
@@ -70,7 +73,17 @@ for product in "${products[@]}"; do
   start_job "${product}"
 done
 
-# Wait for remaining jobs
-for pid in "${pids[@]}"; do
-  wait "${pid}" || true
+# Wait for remaining jobs, and surface failures
+failed=0
+for pid in "${pids[@]:-}"; do
+  if ! wait "${pid}"; then
+    failed=1
+  fi
 done
+
+if (( failed )); then
+  echo "$(date) One or more indexing jobs failed (MODE=${MODE})." >&2
+  exit 1
+fi
+
+echo "$(date) All indexing jobs completed successfully (MODE=${MODE})."
