@@ -27,6 +27,7 @@ RUN apt-get update && \
     python3-wheel \
     python3-venv \
     wget \
+    sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -51,8 +52,12 @@ RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
     pip3 install --no-cache-dir --requirement /tmp/requirements.txt && \
     rm -f /tmp/requirements.txt
 
-# Switch to non-root user
-USER jupyter
+# Copy start script
+COPY scripts/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# Entrypoint will handle user switching
+ENTRYPOINT ["/usr/local/bin/start.sh"]
 WORKDIR /notebooks
 
 # Expose Jupyter port

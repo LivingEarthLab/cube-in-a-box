@@ -46,7 +46,7 @@ services:
 
   jupyter:
     profiles: [ init ]
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260126
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260203
     init: true
     environment:
       - ODC_DEFAULT_DB_HOSTNAME=postgres
@@ -74,7 +74,7 @@ services:
       - backend
 
   jupyterhub:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-hub:20260126
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-hub:20260203
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
@@ -84,7 +84,7 @@ services:
     environment:
       - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS}
       - JUPYTERHUB_USERS=${JUPYTERHUB_USERS}
-      - DOCKER_JUPYTER_IMAGE=git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260126
+      - DOCKER_JUPYTER_IMAGE=git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260203
       - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}-backend
       - POSTGRES_DBNAME=${POSTGRES_DBNAME}
       - POSTGRES_PASS=${POSTGRES_PASS}
@@ -121,7 +121,7 @@ services:
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
   explorer:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260126
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260203
     environment:
       - POSTGRES_HOSTNAME=postgres
       - PGPORT=5432

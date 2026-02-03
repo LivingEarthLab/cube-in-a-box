@@ -162,7 +162,7 @@ c.DockerSpawner.volumes = {
 
 
 # Remove containers once they are stopped
-c.DockerSpawner.remove = True
+c.DockerSpawner.remove = False
 
 # For debugging arguments
 c.DockerSpawner.debug = True

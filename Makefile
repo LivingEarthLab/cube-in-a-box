@@ -82,7 +82,8 @@ build-nocache: ## Build the images locally from scratch
 	@docker buildx bake --no-cache dev
 
 clean: ## Stop everything and remove containers, volumes, and built images
-	@$(DC) down --rmi all -v --remove-orphans
+	@# Remove spawned user containers to release the network
+	@docker ps -aq --filter "name=^jupyter-" | xargs -r docker rm -f
 	@$(DC) --profile init down --rmi all -v --remove-orphans
 
 down: ## Stop the running services (keeps your data and images)
