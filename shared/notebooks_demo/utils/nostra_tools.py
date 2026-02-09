@@ -17,6 +17,23 @@ def extract_url_from_string(str: str):
         url = match.group(0)
         return url
     
+def extract_path_from_string(str: str):
+    """
+    Extract the first filesystem path found in a given string using regex pattern matching.
+    
+    Args:
+        str (str): Input string that may contain one or more paths.
+            
+    Returns:
+        str or None: The first path found in the string, or None if no path is found.
+    """
+    # Pattern looks for sequences of characters commonly valid in paths, usually containing at least one separator
+    path_pattern = r'(?:/?[\w\-\.]+(?:/[\w\-\.]+)+)'
+    match = re.search(path_pattern, str)
+    if match:
+        path = match.group(0)
+        return path
+    
 def human_readable_bytes(
     size_bytes: int
 ) -> str:

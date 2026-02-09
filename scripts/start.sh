@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Fix ownership of /local_data if it exists
+if [ -d "/local_data" ]; then
+    echo "Fixing /local_data ownership..."
+    chown -R 1000:100 /local_data
+fi
 
 # Handle sudo permissions if requested
 if [ "$GRANT_SUDO" == "yes" ]; then

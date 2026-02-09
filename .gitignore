@@ -9,6 +9,7 @@ backups/
 .DS_Store
 .idea/
 .vscode/
+.snapshots/
 *.swp
 *.swo
 

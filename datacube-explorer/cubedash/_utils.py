@@ -153,13 +153,17 @@ def get_dataset_file_offsets(dataset: Dataset) -> dict[str, str]:
         uri_list.update({name: a.path for name, a in dataset_doc.accessories.items()})
 
     # sign paths if provider is planetarycomputer
-    if dataset.metadata_doc["accessories"]["tilejson"]["path"].startswith(
-        "https://planetarycomputer.microsoft.com/api/data"
-    ):
-        k, v = list(uri_list.items())[0]
-        signed_postfix = sign(v).replace(v, "")
-        for k, v in uri_list.items():
-            uri_list[k] = v + signed_postfix
+    try:
+        if dataset.metadata_doc["accessories"]["tilejson"]["path"].startswith(
+            "https://planetarycomputer.microsoft.com/api/data"
+        ):
+            k, v = list(uri_list.items())[0]
+            signed_postfix = sign(v).replace(v, "")
+            for k, v in uri_list.items():
+                uri_list[k] = v + signed_postfix
+    except (KeyError, TypeError):
+        # partial, local or other dataset without accessories
+        pass
 
     return uri_list
 
@@ -194,6 +198,9 @@ def as_external_url(
     >>> # if base uri was none, we may want to return the s3 location instead of the metadata yaml
     """
     parsed = urlparse(url)
+
+    if url.startswith("file:///local_data/"):
+        return url.replace("file:///local_data/", "/explorer/api/data/")
 
     if s3_region and parsed.scheme == "s3":
         # get buckets for which link should be to data location instead of s3 link

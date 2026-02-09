@@ -286,7 +286,7 @@ up: ## Start the environment in the background (then open Jupyterhub in your bro
 	@$(DC) up -d --remove-orphans --wait --wait-timeout 120
 
 update-explorer: up ## Rebuild the Explorer index so datasets appear in the web UI
-	@$(DC) exec -T explorer cubedash-gen --init --all
+	@$(DC) exec -T explorer cubedash-gen --init --force-refresh --recreate-dataset-extents --all
 
 wait-for-db: # Wait for PostgreSQL to be ready to accept connections
 	@$(DC) exec postgres pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME}

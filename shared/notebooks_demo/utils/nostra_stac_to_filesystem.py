@@ -1,5 +1,6 @@
 # Standard library imports
 import os
+import json
 import re
 import subprocess
 import sys
@@ -7,9 +8,11 @@ import threading
 import uuid
 import xml.dom.minidom as minidom
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import timedelta
+from fnmatch import fnmatch
 from io import BytesIO
 from itertools import islice
 from pathlib import Path
@@ -19,25 +22,22 @@ from typing import Any, Dict, Iterable, List, Optional, Pattern, Tuple, Union
 from urllib.parse import unquote, urlparse
 
 # Third-party imports
-import boto3
 import rasterio
 import requests
 import yaml
 import planetary_computer as pc
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dateutil import parser
-from minio import Minio
-from minio.error import S3Error
 from osgeo import osr
 from rasterio.crs import CRS
 from rasterio.warp import transform_bounds
 
 from .nostra_stac import collect_stac_assets
-from .nostra_minio import list_minio_files, describe_minio_image
 
 # remove tqdm pink background
 from tqdm.auto import tqdm
 os.environ['TQDM_DISABLE'] = '0'
+
 
 @contextmanager
 def _progress_bar_context(total, desc='Processing', show_progress=True, progress_bar_format=None, unit='it'):
@@ -79,28 +79,40 @@ def _progress_bar_context(total, desc='Processing', show_progress=True, progress
         yield DummyProgressBar()
 
 def _find_missing_assets(
-    minio_client: Minio,
-    bucket_name: str,
+    base_path: str,
     assets_dict: Dict[str, List[str]]
 ) -> List[str]:
-    """Find assets missing from MinIO bucket by comparing with STAC assets.
+    """Find assets missing from filesystem by comparing with STAC assets.
 
     Args:
-        minio_client: Authenticated MinIO client instance.
-        bucket_name: MinIO bucket name to check.
+        base_path: Base filesystem path to check.
         assets_dict: Dict of assets grouped by directory paths.
 
     Returns:
-        List of asset URLs not found in the MinIO bucket.
+        List of asset URLs not found in the filesystem.
     """
     missing_assets = []
 
     for prefix, asset_list in assets_dict.items():
-        objects = minio_client.list_objects(bucket_name, prefix=prefix, recursive=True)
-        object_names = [obj.object_name for obj in objects]
+        dir_path = os.path.join(base_path, prefix)
+        
+        # Get list of files in directory if it exists
+        if os.path.exists(dir_path):
+            existing_files = []
+            for root, dirs, files in os.walk(dir_path):
+                for file in files:
+                    rel_path = os.path.relpath(os.path.join(root, file), base_path)
+                    existing_files.append(rel_path)
+        else:
+            existing_files = []
 
         for asset in asset_list:
-            if not any(obj_name in asset for obj_name in object_names):
+            # Extract filename from URL
+            parsed_url = urlparse(asset)
+            filename = os.path.basename(parsed_url.path)
+            
+            # Check if file exists in the directory
+            if not any(filename in existing_file for existing_file in existing_files):
                 missing_assets.append(asset)
 
     return missing_assets
@@ -175,18 +187,16 @@ def _invert_grouped_dictionary(grouped_dict: Dict[str, List[str]]) -> Dict[str, 
 
 def _check_missing_assets(
     all_assets: List[str],
-    minio_client: Minio,
-    bucket_name: str,
+    base_path: str,
     separator_pattern: str = "_T\\d_",
     verbose: bool = True,
     dry_run: bool = False
 ) -> List[str]:
-    """Find missing assets in MinIO bucket and analyze their structure.
+    """Find missing assets in filesystem and analyze their structure.
 
     Args:
         all_assets: List of asset URLs/paths.
-        minio_client: MinIO client instance.
-        bucket_name: Bucket name to search in.
+        base_path: Base filesystem path to search in.
         separator_pattern: Regex pattern to find split point in filename.
         verbose: Print summary statistics if True.
         dry_run: Perform dry run if True.
@@ -195,7 +205,7 @@ def _check_missing_assets(
         List of missing assets.
     """
     assets_dict = _create_assets_dictionary(all_assets)
-    missing_assets = _find_missing_assets(minio_client, bucket_name, assets_dict)
+    missing_assets = _find_missing_assets(base_path, assets_dict)
 
     grouped_assets = _group_assets_by_parent(missing_assets, separator_pattern)
     inverted_dict = _invert_grouped_dictionary(grouped_assets)
@@ -227,13 +237,12 @@ def _extract_remote_file_path(url):
         path = path[1:]
     return path
 
-def _download_and_upload_to_minio(url, minio_client: Minio, bucket_name: str, verbose=False, pbar=None, results=None, results_lock=None):
-    """Download file from URL and upload directly to MinIO bucket.
+def _download_and_save_to_filesystem(url, base_path: str, verbose=False, pbar=None, results=None, results_lock=None):
+    """Download file from URL and save to local filesystem.
 
     Args:
         url: Full URL of file to download.
-        minio_client: Authenticated MinIO client instance.
-        bucket_name: MinIO bucket name for upload.
+        base_path: Base filesystem path for saving files.
         verbose: Print success message if True.
         pbar: Optional progress bar for messages.
         results: Shared dictionary to record outcomes.
@@ -243,28 +252,31 @@ def _download_and_upload_to_minio(url, minio_client: Minio, bucket_name: str, ve
         True if successful, False otherwise.
     """
     remote_file_path = _extract_remote_file_path(url)
+    local_file_path = os.path.join(base_path, remote_file_path)
+    
     try:
-        # Download the file in chunks and upload directly to MinIO
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
+        
+        # Download the file in chunks and save to filesystem
         response = requests.get(url, stream=True, timeout=30)
         response.raise_for_status()
-        # Create a generator for the response content
-        def stream_response():
+        
+        # Write to file
+        with open(local_file_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 if chunk:
-                    yield chunk
-        # Wrap the generator in a BytesIO object to make it file-like
-        file_like_object = BytesIO(b''.join(stream_response()))
-        # Upload the file to MinIO
-        minio_client.put_object(bucket_name, remote_file_path, file_like_object, length=file_like_object.getbuffer().nbytes)
+                    f.write(chunk)
+        
         if verbose and pbar:
-            pbar.write(f"✅ File '{url}' uploaded directly to '{bucket_name}/{remote_file_path}'.")
+            pbar.write(f"✅ File '{url}' saved to '{local_file_path}'.")
         
         # Thread-safe success tracking
         if results and results_lock:
             with results_lock:
                 results["summary"]["successful"] += 1
                 
-    except (requests.RequestException, S3Error) as e:
+    except (requests.RequestException, OSError) as e:
         # Thread-safe error tracking
         if results and results_lock:
             with results_lock:
@@ -273,22 +285,20 @@ def _download_and_upload_to_minio(url, minio_client: Minio, bucket_name: str, ve
         return False
     return True
 
-def _download_upload_assets(
+def _download_save_assets(
     all_assets, 
-    minio_client: Minio, 
-    bucket_name: str, 
+    base_path: str, 
     desc='Downloading assets', 
     verbose=False, 
     max_workers=5,
     show_progress=True,
     progress_bar_format=None
 ):
-    """Download and upload multiple assets to MinIO concurrently.
+    """Download and save multiple assets to filesystem concurrently.
 
     Args:
         all_assets: List of asset URLs to download.
-        minio_client: Authenticated MinIO client instance.
-        bucket_name: MinIO bucket name for uploads.
+        base_path: Base filesystem path for saving files.
         desc: Progress bar description.
         verbose: Enable verbose logging for each operation.
         max_workers: Maximum threads for parallel execution.
@@ -315,7 +325,7 @@ def _download_upload_assets(
         progress_bar_format=progress_bar_format
     ) as pbar:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(_download_and_upload_to_minio, url, minio_client, bucket_name, verbose, pbar, results, results_lock) for url in all_assets]
+            futures = [executor.submit(_download_and_save_to_filesystem, url, base_path, verbose, pbar, results, results_lock) for url in all_assets]
             for future in as_completed(futures):
                 pbar.update(1)
     
@@ -325,9 +335,8 @@ def _download_upload_assets(
     
     return results
 
-def stac_to_minio(
-    minio_client: Minio,
-    minio_bucket: str,
+def stac_to_filesystem(
+    base_path: str,
     stac_endpoint: str,
     stac_collection: str,
     platforms: Tuple[str, str],
@@ -344,14 +353,13 @@ def stac_to_minio(
     progress_desc: Optional[str] = None,
     progress_bar_format: Optional[str] = None
 ) -> Tuple[dict, dict]:
-    """Download STAC assets to MinIO bucket based on search criteria.
+    """Download STAC assets to local filesystem based on search criteria.
 
     Main entry point that identifies assets from STAC endpoint, checks for 
-    existence in MinIO, and downloads missing or all assets to the bucket.
+    existence in filesystem, and downloads missing or all assets to the local path.
 
     Args:
-        minio_client: Authenticated MinIO client instance.
-        minio_bucket: MinIO bucket name.
+        base_path: Base filesystem path for storing files.
         stac_endpoint: STAC API endpoint URL.
         stac_collection: Collection name to search.
         platforms: Platform names to filter by (e.g., ('landsat-8', 'landsat-9')).
@@ -361,7 +369,7 @@ def stac_to_minio(
         group_size: Assets to download per batch.
         t1_only: Filter for T1 processing level only.
         overwrite: Download all assets and overwrite existing ones.
-        complete: Only download missing assets from MinIO bucket.
+        complete: Only download missing assets from filesystem.
         verbose: Enable verbose logging.
         dry_run: Search and check for missing assets without downloading.
         show_progress: Whether to show progress bars.
@@ -373,6 +381,9 @@ def stac_to_minio(
     """
     if not overwrite and not complete and not dry_run:
         raise ValueError('At least one of overwrite, complete or dry_run argument need to be True')
+    
+    # Create base directory if it doesn't exist
+    os.makedirs(base_path, exist_ok=True)
     
     print('- Fetching STAC assets...')
     all_assets = collect_stac_assets(
@@ -388,7 +399,7 @@ def stac_to_minio(
     missing_assets = []
     if not overwrite or dry_run:
         print('- Checking for missing assets...')
-        missing_assets = _check_missing_assets(all_assets, minio_client, minio_bucket,
+        missing_assets = _check_missing_assets(all_assets, base_path,
                                               verbose = verbose, dry_run = dry_run)
         
         if len(missing_assets) == 0 or dry_run or not complete:
@@ -420,10 +431,9 @@ def stac_to_minio(
         for url in batch_assets:
             signed_url = pc.sign_inplace(url)
             signed_assets.append(signed_url)
-        result = _download_upload_assets(
+        result = _download_save_assets(
             signed_assets, 
-            minio_client, 
-            minio_bucket, 
+            base_path, 
             desc,
             verbose=verbose,
             show_progress=show_progress,
@@ -441,53 +451,209 @@ def stac_to_minio(
     print('- Done')
     return assets_dict, combined_results
 
-def _update_accessories(others: list, minio_url: str, minio_bucket: str) -> dict:
-    """
-    Updates a dictionary of accessories with their corresponding MinIO paths.
+def list_filesystem_tree(
+    base_path: str,
+    prefix: str = '',
+    max_recursion_level: Optional[int] = None,
+    show_sizes: bool = False
+) -> None:
+    """Lists the contents of a filesystem directory as a tree structure.
+
+    This function recursively lists the files and directories within a specified path, 
+    displaying them in a tree-like format. It can optionally show file sizes 
+    and limit the recursion depth.
 
     Args:
-        others: A list of accessory filenames.
-        minio_url: The base URL of the MinIO server.
-        minio_bucket: The name of the MinIO bucket.
+        base_path: The base filesystem path to list.
+        prefix: A relative path prefix to filter by. Defaults to ''.
+        max_recursion_level: The maximum recursion depth to display. 
+                            Defaults to None (no limit).
+        show_sizes: Whether to display file and folder sizes. 
+                   Defaults to False.
+    """
+    try:
+        full_path = os.path.join(base_path, prefix) if prefix else base_path
+        
+        if not os.path.exists(full_path):
+            print(f"⚠️ Path does not exist: {full_path}")
+            return
+        
+        directory_structure = {}
+        file_sizes = {}
+        
+        # Walk the directory tree
+        for root, dirs, files in os.walk(full_path):
+            # Get relative path from the starting point
+            rel_root = os.path.relpath(root, full_path)
+            if rel_root == '.':
+                rel_root = ''
+            
+            # Process files
+            for file in files:
+                file_path = os.path.join(root, file)
+                rel_file_path = os.path.relpath(file_path, full_path)
+                
+                # Store file size
+                try:
+                    file_sizes[rel_file_path] = os.path.getsize(file_path)
+                except OSError:
+                    file_sizes[rel_file_path] = 0
+                
+                # Build directory structure
+                parts = rel_file_path.split(os.sep)
+                current_level = directory_structure
+                for part in parts:
+                    if part not in current_level:
+                        current_level[part] = {}
+                    current_level = current_level[part]
+        
+        def calculate_folder_sizes(node, current_path=''):
+            """Recursively calculate cumulative folder sizes."""
+            total_size = 0
+            
+            for key, value in node.items():
+                full_path_key = os.path.join(current_path, key) if current_path else key
+                
+                if isinstance(value, dict) and value:
+                    folder_size = calculate_folder_sizes(value, full_path_key)
+                    total_size += folder_size
+                else:
+                    if full_path_key in file_sizes:
+                        total_size += file_sizes[full_path_key]
+            
+            return total_size
+        
+        folder_sizes = {}
+        if show_sizes:
+            def build_folder_sizes(node, current_path=''):
+                for key, value in node.items():
+                    full_path_key = os.path.join(current_path, key) if current_path else key
+                    
+                    if isinstance(value, dict) and value:
+                        folder_size = calculate_folder_sizes(value, full_path_key)
+                        folder_sizes[full_path_key] = folder_size
+                        build_folder_sizes(value, full_path_key)
+            
+            build_folder_sizes(directory_structure)
+        
+        def human_readable_bytes(size_bytes):
+            """Convert bytes to human readable format."""
+            for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+                if size_bytes < 1024.0:
+                    return f"{size_bytes:.2f} {unit}"
+                size_bytes /= 1024.0
+            return f"{size_bytes:.2f} PB"
+        
+        def print_tree(node, current_level=0, is_last=False, indent='', current_path=''):
+            if max_recursion_level is not None and current_level > max_recursion_level:
+                print(indent + '... (truncated)')
+                return
+            
+            for i, (key, value) in enumerate(node.items()):
+                is_last_item = i == len(node) - 1
+                full_path_key = os.path.join(current_path, key) if current_path else key
+                is_file = isinstance(value, dict) and not value
+                
+                size_display = ''
+                if show_sizes:
+                    if is_file and full_path_key in file_sizes:
+                        size_display = f' ({human_readable_bytes(file_sizes[full_path_key])})'
+                    elif not is_file and full_path_key in folder_sizes:
+                        size_display = f' ({human_readable_bytes(folder_sizes[full_path_key])})'
+                
+                connector = '└── ' if is_last_item else '├── '
+                print(indent + connector + key + size_display)
+                
+                if is_last_item:
+                    new_indent = indent + '    '
+                else:
+                    new_indent = indent + '│   '
+                
+                if isinstance(value, dict) and value:
+                    print_tree(value, current_level + 1, is_last_item, new_indent, full_path_key)
+        
+        print_tree(directory_structure)
+        
+    except Exception as e:
+        print(f"⚠️ Error listing directory contents: {e}")
 
+
+def find_last_level_folders(fs_path, filter_pattern = "*"):
+    """
+    Find all last-level (leaf) folders matching the filter pattern.
+    
+    Args:
+        fs_path: Root path to search from
+        filter_pattern: Pattern to match folder paths (supports wildcards)
+                       e.g., "oli-tirs/**/*202406*202406"
+    
     Returns:
-        A dictionary mapping the lowercase accessory name (extracted from the filename) 
-        to a dictionary containing the accessory's MinIO path.
+        List of Path objects for matching leaf folders
     """
-    updated_accessories_dict = {}
-    for other in others:
-        updated_accessories_dict[other.split('_')[-1].lower()] = {'path': os.path.join(minio_url, minio_bucket, other)}
-    return updated_accessories_dict
+    root = Path(fs_path)
+    matching_folders = []
+    
+    # Walk through all directories
+    for item in root.rglob("*"):
+        if item.is_dir():
+            # Check if this is a leaf directory (no subdirectories)
+            has_subdirs = any(sub.is_dir() for sub in item.iterdir())
+            
+            if not has_subdirs:
+                # Get relative path from root for pattern matching
+                rel_path = item.relative_to(root)
+                
+                # Check if path matches the pattern
+                if fnmatch(str(rel_path), filter_pattern):
+                    matching_folders.append(str(item.relative_to(fs_path)))
+    
+    return matching_folders
 
-def _find_file_name_by_suffix(xml_doc: minidom.Document, suffix: str) -> str | None:
-    """
-    Finds a file name within an XML document that ends with a specific suffix.
+def _describe_filesystem_image(image_path: str) -> Dict[str, Any]:
+    """Describes the geospatial properties of an image in the filesystem.
 
     Args:
-        xml_doc: The XML document to search.
-        suffix: The suffix to search for (excluding the '.TIF' extension).
+        image_path (str): The path to the image file.
 
     Returns:
-        The file name if found, otherwise None.
+        Dict[str, Any]: A dictionary containing the extracted geospatial properties:
+                          'epsg_code' (int or None), 'polygon' (list of coordinates), 
+                          'transform' (transform object), 'shape' (tuple of width and height).
     """
-    product_contents = xml_doc.getElementsByTagName('PRODUCT_CONTENTS')[0]
-    for child in product_contents.childNodes:
-        if child.nodeType == minidom.Node.ELEMENT_NODE and child.tagName.startswith('FILE_NAME_'):
-            if child.firstChild and child.firstChild.nodeValue.strip().endswith(suffix + '.TIF'):
-                return child.firstChild.nodeValue.strip()
-    return None
+    with rasterio.open(image_path) as img:
+        # Get bounds and CRS
+        left, bottom, right, top = img.bounds
+        crs = img.crs
 
-def _get_xml_value(xml_doc: minidom.Document, xml_path: str) -> str | None:
-    """
-    Retrieves a value from an XML document given an XPath-like path.
+        # EPSG code (if available)
+        epsg_code = None
+        if crs and crs.is_epsg_code:
+            epsg_code = int(crs.to_epsg())
 
-    Args:
-        xml_doc: The XML document to search.
-        xml_path: The path to the desired value, using '/' as a separator for tags.
+        # Polygon corners (closed loop: ul -> ur -> lr -> ll -> ul)
+        polygon = [
+            [left, top],     # ul
+            [right, top],    # ur
+            [right, bottom], # lr
+            [left, bottom],  # ll
+            [left, top]      # ul (close the polygon)
+        ]
 
-    Returns:
-        The text value of the node at the given path, or None if the path is invalid or the node has no value.
-    """
+        # Transform object
+        transform = img.transform
+
+        # Shape (width, height)
+        shape = (img.width, img.height)
+
+        return {
+            'epsg_code': epsg_code,
+            'polygon': polygon,
+            'transform': transform,
+            'shape': shape
+        }
+
+def _get_filesystem_xml_value(xml_doc: minidom.Document, xml_path: str) -> str | None:
+    """Retrieves a value from an XML document given an XPath-like path."""
     parts = xml_path.split('/')
     current_node = xml_doc.documentElement
     for part in parts:
@@ -497,17 +663,17 @@ def _get_xml_value(xml_doc: minidom.Document, xml_path: str) -> str | None:
             return None
     return current_node.firstChild.nodeValue if current_node.firstChild else None
 
+def _find_file_name_by_suffix(xml_doc: minidom.Document, suffix: str) -> str | None:
+    """Finds a file name within an XML document that ends with a specific suffix."""
+    product_contents = xml_doc.getElementsByTagName('PRODUCT_CONTENTS')[0]
+    for child in product_contents.childNodes:
+        if child.nodeType == minidom.Node.ELEMENT_NODE and child.tagName.startswith('FILE_NAME_'):
+            if child.firstChild and child.firstChild.nodeValue.strip().endswith(suffix + '.TIF'):
+                return child.firstChild.nodeValue.strip()
+    return None
+
 def _extract_variables_from_xml(xml_doc: minidom.Document, yaml_config: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Extracts variables from an XML document based on a YAML configuration.
-
-    Args:
-        xml_doc: The XML document to extract data from.
-        yaml_config: A dictionary defining variable names and their corresponding XML paths.
-
-    Returns:
-        A dictionary containing the extracted variables.
-    """
+    """Extracts variables from an XML document based on a YAML configuration."""
     # Define keys that are NOT variable mappings
     general_info_keys = {
         'mtl_format', 'schema', 'geometry_type', 'description', 'file_format'
@@ -530,8 +696,8 @@ def _extract_variables_from_xml(xml_doc: minidom.Document, yaml_config: Dict[str
         elif '+' in xml_path:
             parts = [part.strip() for part in xml_path.split('+')]
             if len(parts) == 2:
-                date_value = _get_xml_value(xml_doc, parts[0])
-                time_value = _get_xml_value(xml_doc, parts[1])
+                date_value = _get_filesystem_xml_value(xml_doc, parts[0])
+                time_value = _get_filesystem_xml_value(xml_doc, parts[1])
                 if date_value and time_value:
                     time_value = time_value.rstrip('Z')
                     result[var_name] = f"{date_value}T{time_value}Z"
@@ -542,32 +708,17 @@ def _extract_variables_from_xml(xml_doc: minidom.Document, yaml_config: Dict[str
         
         # Standard XML path extraction
         else:
-            result[var_name] = _get_xml_value(xml_doc, xml_path)
+            result[var_name] = _get_filesystem_xml_value(xml_doc, xml_path)
 
     return result
 
-def _find_and_read_mtl(
-    minio_client: Minio,
-    minio_bucket: str,
+def _find_and_read_mtl_filesystem(
     folder: str,
     suffix: str,
     yaml_file: str,
     verbose: bool = False
 ) -> Optional[Dict[str, Any]]:
-    """
-    Finds and reads an MTL file (XML or JSON) from MinIO, extracts variables based on a YAML configuration.
-
-    Args:
-        minio_client: Authenticated MinIO client instance.
-        minio_bucket: The name of the MinIO bucket.
-        folder: The folder within the bucket to search for the MTL file.
-        suffix: The file suffix (e.g., ".xml", ".json").
-        yaml_file: The path to the YAML configuration file.
-        verbose: Whether to print verbose output.
-
-    Returns:
-        A dictionary containing the extracted variables, or None if the file is not found or an error occurs.
-    """
+    """Finds and reads an MTL file from filesystem, extracts variables based on config."""
     # Load YAML configuration
     try:
         with open(yaml_file, 'r') as f:
@@ -578,10 +729,11 @@ def _find_and_read_mtl(
         raise Exception(f"Error loading YAML config from {yaml_file}: {e}")
     
     # Find matching files
-    matches = [
-        obj for obj in minio_client.list_objects(minio_bucket, prefix=folder + "/", recursive=False)
-        if obj.object_name.endswith(suffix)
-    ]
+    matches = []
+    if os.path.exists(folder):
+        for f in os.listdir(folder):
+            if f.endswith(suffix) and os.path.isfile(os.path.join(folder, f)):
+                matches.append(f)
     
     if not matches:
         error_msg = f"No file with suffix '{suffix}' found in {folder}"
@@ -590,22 +742,23 @@ def _find_and_read_mtl(
         raise FileNotFoundError(error_msg)
     
     if len(matches) > 1:
-        error_msg = f"Multiple files with suffix '{suffix}' found in {folder}: {[obj.object_name for obj in matches]}"
+        error_msg = f"Multiple files with suffix '{suffix}' found in {folder}: {matches}"
         if verbose:
             print(f"⚠️ {error_msg}")
         raise ValueError(error_msg)
     
-    obj = matches[0]
+    filename = matches[0]
+    file_path = os.path.join(folder, filename)
     if verbose:
-        print(f"📄 Found file: {obj.object_name}")
+        print(f"📄 Found file: {file_path}")
     
     try:
-        with minio_client.get_object(minio_bucket, obj.object_name) as response:
-            file_content = response.read().decode("utf-8")
+        with open(file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
             
             if suffix.endswith(".xml"):
                 if not file_content.strip().startswith(('<?xml', '<')):
-                    error_msg = f"File {obj.object_name} is not valid XML"
+                    error_msg = f"File {filename} is not valid XML"
                     if verbose:
                         print(f"⚠️ {error_msg}.")
                     raise ValueError(error_msg)
@@ -615,13 +768,15 @@ def _find_and_read_mtl(
                 return _extract_variables_from_xml(xml_doc, yaml_config)
                 
             elif suffix.endswith(".json"):
-                if verbose:
-                    print(".json format not supported yet")
-                try:
+                 try:
                     json_data = json.loads(file_content)
-                    return extract_variables_from_json(json_data, yaml_config)
-                except json.JSONDecodeError as e:
-                    error_msg = f"File {obj.object_name} is not valid JSON: {e}"
+                    # Note: We don't have extract_variables_from_json implemented yet in this file
+                    # If needed, it should be added. For now raising error or simple pass if not used.
+                    # Assuming for now we rely on XML as per original code structure usually handling XML MTLs.
+                    # If JSON support is strictly needed, need to port extract_variables_from_json logic.
+                    raise NotImplementedError("JSON MTL parsing not fully implemented yet")
+                 except json.JSONDecodeError as e:
+                    error_msg = f"File {filename} is not valid JSON: {e}"
                     if verbose:
                         print(f"⚠️ {error_msg}")
                     raise ValueError(error_msg)
@@ -633,29 +788,18 @@ def _find_and_read_mtl(
                 
     except Exception as e:
         if verbose:
-            print(f"⚠️ Error reading/parsing {obj.object_name}: {e}")
-        if isinstance(e, (FileNotFoundError, ValueError)):
-            raise  # Re-raise our custom exceptions
+            print(f"⚠️ Error reading/parsing {filename}: {e}")
+        if isinstance(e, (FileNotFoundError, ValueError, NotImplementedError)):
+            raise
         else:
-            raise Exception(f"Error reading/parsing {obj.object_name}: {e}")  
+            raise Exception(f"Error reading/parsing {filename}: {e}")
 
 def _dict_from_prfx(
     src_dict: Dict[str, Any],
     prefix: str,
     case_sensitive: bool = True
 ) -> Dict[str, Any]:
-    """
-    Creates a new dictionary from a source dictionary, filtering keys by a prefix.
-
-    Args:
-        src_dict: The source dictionary.
-        prefix: The prefix to filter keys by.
-        case_sensitive: Whether the prefix comparison should be case-sensitive.
-
-    Returns:
-        A new dictionary containing only the key-value pairs from `src_dict` 
-        where the key starts with the given `prefix`. The prefix is removed from the new key.
-    """
+    """Creates a new dictionary from a source dictionary, filtering keys by a prefix."""
     norm_prefix = prefix if case_sensitive else prefix.lower()
     result = {}
 
@@ -667,128 +811,82 @@ def _dict_from_prfx(
 
     return result
 
-def _update_bands(bands_dict: dict, images: list, minio_url: str, minio_bucket: str) -> dict:
-    """
-    Updates a dictionary of band names with their corresponding MinIO paths.
-
-    Args:
-        bands_dict: A dictionary mapping band names to filenames.
-        images: A list of full paths to images in MinIO.
-        minio_url: The base URL of the MinIO server.
-        minio_bucket: The name of the MinIO bucket.
-
-    Returns:
-        A new dictionary containing only the band names that were found in the list of images, 
-        with their paths updated to include the MinIO URL and bucket name. Band names not found
-        in the images list are omitted.
-    """
+def _update_bands_filesystem(bands_dict: dict, folder: str) -> dict:
+    """Updates a dictionary of band names with their corresponding filesystem paths."""
     updated_bands_dict = {}
+    
+    # Get all files in folder to match against
+    if not os.path.exists(folder):
+        return {}
+        
+    files = [os.path.join(folder, f) for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+    
     for band_name, filename in bands_dict.items():
         found_match = False
-        for full_path in images:
-            if filename in full_path:
-                updated_bands_dict[band_name] = {'path': os.path.join(minio_url, minio_bucket, full_path)}
+        for full_path in files:
+            if filename in os.path.basename(full_path):
+                # Use absolute path for safety in ODC indexing
+                updated_bands_dict[band_name] = {'path': os.path.abspath(full_path)}
                 found_match = True
-                break  # Found a match for this filename, move to the next band_name
-        # If found_match is False here, it means the filename was not found in any full_path,
-        # so we simply don't add it to updated_bands_dict, effectively removing it.
+                break
     return updated_bands_dict
 
-def _yaml_bytes_from_dict(data: dict) -> BytesIO:
-    """
-    Converts a dictionary to a YAML formatted BytesIO object.
+def _update_accessories_filesystem(others: list, folder: str) -> dict:
+    """Updates a dictionary of accessories with their corresponding filesystem paths."""
+    updated_accessories_dict = {}
+    for other in others:
+        # others contains filenames relative to folder usually? 
+        # In original code 'others' came from list_minio_files which returned relative paths?
+        # Here we assume 'others' are filenames or relative paths
+        full_path = os.path.abspath(os.path.join(folder, other))
+        updated_accessories_dict[other.split('_')[-1].lower()] = {'path': full_path}
+    return updated_accessories_dict
 
-    Args:
-        data: The dictionary to convert.
-
-    Returns:
-        A BytesIO object containing the YAML formatted data.
-    """
-    # Dump to a string first (yaml.safe_dump is preferred for untrusted data)
-    yaml_str = yaml.safe_dump(data, default_flow_style=False, sort_keys=False, allow_unicode=True)
-    
-    # Remove quotes around stringed lists
-    yaml_str = re.sub(r"coordinates: '(.+?)'", r"coordinates: \1", yaml_str, flags=re.DOTALL)
-    yaml_str = re.sub(r"shape: '(.+?)'", r"shape: \1", yaml_str, flags=re.DOTALL)
-    yaml_str = re.sub(r"transform: '(.+?)'", r"transform: \1", yaml_str, flags=re.DOTALL)
-
-    # Encode to UTF‑8 and wrap in BytesIO so MinIO sees a file‑like object
-    return BytesIO(yaml_str.encode("utf-8"))
-
-def _upload_yaml_to_minio(
+def _save_yaml_to_filesystem(
     doc: dict,
     yaml_path: str,
-    minio_client: Minio,
-    bucket_name: str,
-    minio_url: str,
     verbose: bool = False,
 ) -> str:
-    """
-    Uploads a YAML document (represented as a dictionary) to MinIO.
-
-    Args:
-        doc: The dictionary to upload as YAML.
-        yaml_path: The path within the MinIO bucket where the YAML file will be stored.
-        minio_client: Authenticated MinIO client instance.
-        bucket_name: The name of the MinIO bucket.
-        minio_url: The base URL of the MinIO server.
-        verbose: Whether to print verbose output.
-
-    Returns:
-        A success or failure message string.
-    """
+    """Saves a dictionary as a YAML file to the filesystem."""
     try:
-        # Turn the dict into a BytesIO containing the YAML payload
-        yaml_stream = _yaml_bytes_from_dict(doc)
+        # Dump to string
+        yaml_str = yaml.safe_dump(doc, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        
+        # Remove quotes around stringed lists (same regex as original)
+        yaml_str = re.sub(r"coordinates: '(.+?)'", r"coordinates: \1", yaml_str, flags=re.DOTALL)
+        yaml_str = re.sub(r"shape: '(.+?)'", r"shape: \1", yaml_str, flags=re.DOTALL)
+        yaml_str = re.sub(r"transform: '(.+?)'", r"transform: \1", yaml_str, flags=re.DOTALL)
 
-        # Upload – MinIO needs the exact byte length up front
-        size = yaml_stream.getbuffer().nbytes
-        minio_client.put_object(
-            bucket_name,
-            yaml_path,
-            yaml_stream,
-            length=size,
-            content_type="application/x-yaml",
-        )
+        with open(yaml_path, 'w', encoding='utf-8') as f:
+            f.write(yaml_str)
 
         if verbose:
-            print(
-                f"✅ YAML document uploaded to {os.path.join(minio_url, bucket_name, yaml_path)}"
-                f"({size:,} bytes)."
-            )
-        return f"✅ YAML document uploaded to {os.path.join(minio_url, bucket_name, yaml_path)}"
+            print(f"✅ YAML document saved to {yaml_path}")
+        return f"✅ YAML document saved to {yaml_path}"
 
-    except (S3Error, OSError) as exc:
-        # S3Error covers most MinIO‑side problems; OSError catches stream issues
+    except Exception as exc:
         if verbose:
-            print(f"⚠️ Failed to upload YAML: {exc}")
-        return f"⚠️ Failed to upload YAML: {exc}"
+            print(f"⚠️ Failed to save YAML: {exc}")
+        return f"⚠️ Failed to save YAML: {exc}"
 
-def prepare_yaml(
-    minio_client: Minio,
-    minio_bucket: str,
-    minio_url: str,
+def prepare_yaml_filesystem(
     folder: str,
     product_name: str,
     yaml_file: str,
     verbose: bool = True
 ) -> str:
-    """
-    Prepares a YAML document from an MTL file and uploads it to MinIO.
+    """Prepares a YAML document from an MTL file and saves it to filesystem.
 
     Args:
-        minio_client: Authenticated MinIO client instance.
-        minio_bucket: The name of the MinIO bucket.
-        minio_url: The base URL of the MinIO server.
         folder: The folder containing the MTL file and images.
         product_name: The name of the product.
-        yaml_file: The path to the YAML configuration file.
+        yaml_file: The path to the YAML configuration file (rules).
         verbose: Whether to print verbose output.
 
     Returns:
-        A success or failure message string from the upload operation.
+        A success or failure message string.
     """
-    scene_id = folder.split('/')[-1]
+    scene_id = os.path.basename(folder.rstrip(os.sep))
     
     with open(yaml_file, 'r') as file:
         data = yaml.safe_load(file)
@@ -798,21 +896,44 @@ def prepare_yaml(
         description = data['description']
         file_format = data['file_format']
         
-    # Pass verbose parameter to _find_and_read_mtl
-    mtl_content = _find_and_read_mtl(
-        minio_client=minio_client,
-        minio_bucket=minio_bucket,
+    # Read MTL
+    mtl_content = _find_and_read_mtl_filesystem(
         folder=folder,
         suffix=suffix,
         yaml_file=yaml_file,
-        verbose=verbose)  # <-- Add this parameter
+        verbose=verbose
+    )
     
-    # Rest of your function remains the same...
     bands_dict = _dict_from_prfx(mtl_content, 'bands_dict_')
-    images, others = list_minio_files(minio_client, minio_bucket, folder, recursive=bool)
-    bands = _update_bands(bands_dict, images, minio_url, minio_bucket)
-    accessories = _update_accessories(others, minio_url, minio_bucket)
-    image_description = describe_minio_image(minio_client, minio_bucket, images[0])
+    
+    # List files in folder to separate images and accessories
+    images = []
+    others = []
+    if os.path.exists(folder):
+        for f in os.listdir(folder):
+            f_path = os.path.join(folder, f)
+            if os.path.isfile(f_path):
+                if f.lower().endswith(('.tif', '.tiff')):
+                    images.append(f)
+                else:
+                    others.append(f)
+    
+    bands = _update_bands_filesystem(bands_dict, folder)
+    accessories = _update_accessories_filesystem(others, folder)
+    
+    # Describe first image to get geometry
+    # We need to find which image corresponds to a band to ensure it exists, 
+    # but any valid image in the folder typically shares the same grid in these products
+    first_image_path = None
+    if bands:
+        first_image_path = next(iter(bands.values()))['path']
+    elif images:
+        first_image_path = os.path.join(folder, images[0])
+        
+    if not first_image_path:
+        raise FileNotFoundError(f"No suitable image found in {folder} to extract geometry")
+        
+    image_description = _describe_filesystem_image(first_image_path)
     
     doc = {
         '$schema': schema,
@@ -821,7 +942,6 @@ def prepare_yaml(
         'product': {
             'name': product_name,
         },
-        'location': 'http://minio:9001/browser/test/landsat-c2/level-2/standard/oli-tirs',
         'crs': f"epsg:{image_description['epsg_code']}",
         'geometry': {
             'type': geometry_type,
@@ -865,55 +985,31 @@ def prepare_yaml(
         'lineage': {},
     }
 
-    yaml_path = str(Path(folder).joinpath(f"{product_name}-metadata.yaml"))
+    yaml_output_path = os.path.join(folder, f"{product_name}-metadata.yaml")
     
-    result = _upload_yaml_to_minio(doc,
-        yaml_path,
-        minio_client,
-        minio_bucket,
-        minio_url,
+    result = _save_yaml_to_filesystem(
+        doc,
+        yaml_output_path,
         verbose=verbose,
     )
     return result
 
-def _prepare_minio_folder(
+def _prepare_filesystem_folder(
     folder: str,
-    minio_client: Minio,
-    minio_bucket: str,
-    minio_url: str,
     product_name: str,
     yaml_file: str,
     pbar: Any = None
 ) -> Dict[str, Any]:
-    """
-    Prepares a folder in MinIO by loading a YAML configuration and processing associated data.
-
-    Args:
-        folder: The path to the folder in MinIO.
-        minio_client: Authenticated MinIO client instance.
-        minio_bucket: The name of the MinIO bucket.
-        minio_url: The URL of the MinIO server.
-        product_name: The name of the product.
-        yaml_file: The path to the YAML configuration file.
-        pbar: A progress bar object (optional).
-
-    Returns:
-        A dictionary containing the folder path, the processing result, and the status (success/failed).
-        If failed, the dictionary also includes an error message.
-    """
+    """Prepares a folder in filesystem by loading a YAML configuration and processing associated data."""
     try:
-        # The variables are now passed directly to the function
-        result = prepare_yaml(
-            minio_client=minio_client,
-            minio_bucket=minio_bucket,
-            minio_url=minio_url,
+        result = prepare_yaml_filesystem(
             folder=folder,
             product_name=product_name,
             yaml_file=yaml_file,
             verbose=False
         )
         if pbar:
-            pbar.set_postfix_str(f"✓ {folder.split('/')[-1]}")
+            pbar.set_postfix_str(f"✓ {os.path.basename(folder)}")
         return {
             'folder': folder,
             'result': result,
@@ -921,7 +1017,7 @@ def _prepare_minio_folder(
         }
     except Exception as e:
         if pbar:
-            pbar.set_postfix_str(f"✗ {folder.split('/')[-1]} failed")
+            pbar.set_postfix_str(f"✗ {os.path.basename(folder)} failed")
         return {
             'folder': folder,
             'result': None,
@@ -929,27 +1025,17 @@ def _prepare_minio_folder(
             'error': str(e)
         }
 
-def prepare_minio_folders(
-    folders: list[str],
-    minio_client: Minio,
-    minio_bucket: str,
-    minio_url: str,
+def prepare_filesystem_folders(
+    folders: List[str],
     product_name: str,
     yaml_file: str,
     max_workers: int = 8,
     show_progress: bool = True,
-) -> list[dict]:
-    """Prepares folders in MinIO based on a YAML configuration.
-
-    This function processes a list of folders, creating them in a MinIO bucket
-    according to the specifications outlined in a provided YAML file. It utilizes
-    a thread pool for concurrent processing and provides progress updates.
+) -> List[dict]:
+    """Prepares folders in filesystem based on a YAML configuration.
 
     Args:
-        folders: A list of folder paths to prepare in MinIO.
-        minio_client: Authenticated MinIO client instance.
-        minio_bucket: The name of the MinIO bucket.
-        minio_url: The URL of the MinIO server.
+        folders: A list of folder paths to prepare.
         product_name: The name of the product associated with the folders.
         yaml_file: The path to the YAML configuration file.
         max_workers: The maximum number of threads to use for processing. Defaults to 8.
@@ -957,9 +1043,7 @@ def prepare_minio_folders(
 
     Returns:
         list[dict]: A list of dictionaries, where each dictionary represents the result
-                     of processing a folder. Each dictionary contains a 'status' key
-                     ('success' or 'failed') and, in case of failure, an 'error' key
-                     with the error message.
+                     of processing a folder.
     """
     # Check if YAML file exists
     if not os.path.exists(yaml_file):
@@ -972,13 +1056,11 @@ def prepare_minio_folders(
         with _progress_bar_context(total=len(folders), desc="Processing", show_progress=show_progress) as pbar:
             futures = {
                 executor.submit(
-                    _prepare_minio_folder,
+                    _prepare_filesystem_folder,
                     folder,
-                    minio_client,
-                    minio_bucket,
-                    minio_url,
                     product_name,
                     yaml_file,
+                    pbar
                 ): folder for folder in folders
             }
             
@@ -999,118 +1081,105 @@ def prepare_minio_folders(
             folder_name = os.path.basename(item['folder'])
             print(f"  ✗ {folder_name}: {item['error']}")
             
-    return results   
+    return results
 
-def valid_minio_folders(
-    minio_client: Minio,
-    minio_bucket: str,
-    folders: List[str],
-    overwrite: bool = False,
-) -> List[str]:
-    """Validates a list of MinIO folders based on the presence of a metadata file.
 
-    This function checks if folders in a MinIO bucket contain a '-metadata.yaml' file.
-    It returns a list of folders that either do not have the metadata file or are
-    allowed to be overwritten.
-
-    Args:
-        minio_client: Authenticated MinIO client instance.
-        minio_bucket: The name of the MinIO bucket.
-        folders: A list of folder paths to validate.
-        overwrite: Whether to allow overwriting existing folders. Defaults to False.
-
-    Returns:
-        List[str]: A list of valid folder paths.
-    """
-    if overwrite:
-        return folders
-
-    valid_folder_list = []
-    for folder in folders:
-        try:
-            objects = minio_client.list_objects(minio_bucket, prefix=folder + "/", recursive=False)
-            if not any(obj.object_name.lower().endswith('-metadata.yaml') for obj in objects):
-                valid_folder_list.append(folder)
-        except Exception as e:
-            print(f"⚠️ Error checking folder {folder}: {e}")
-
-    return valid_folder_list
-
-def index_minio_yaml(url: str, product: str) -> Dict[str, Any]:
-    """Indexes a MinIO YAML file using a Python script.
-
-    This function executes a Python script (`hcp_to_dc.py`) to process a YAML file
-    located in a MinIO bucket and index it for a specific product. It captures the
-    script's output and returns a dictionary indicating success or failure.
-
-    Args:
-        url (str): The URL of the YAML file in MinIO (e.g., 'minio://host/bucket/path/file.yaml').
-        product (str): The name of the product associated with the YAML file.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing the result of the indexing process.
-                       If successful, it includes 'success': True, 'url', 'stdout', and 'stderr'.
-                       If failed, it includes 'success': False, 'url', 'error', and optionally 'returncode'.
-    """
-    parsed_url = urlparse(url)
-    endpoint = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    bucket_name = parsed_url.path.strip('/').split('/')[0]
-    
-    command = ["python", "hcp_to_dc.py", endpoint, bucket_name, product, "--mtdsstr", url]
-    
-    try:
-        # Execute the command and capture output
-        result = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=300  # 5 minute timeout
-        )
-        return {"success": True, "url": url, "stdout": result.stdout, "stderr": result.stderr}
-    
-    except subprocess.CalledProcessError as e:
-        return {"success": False, "url": url, "error": e.stderr, "returncode": e.returncode}
-    
-    except subprocess.TimeoutExpired:
-        return {"success": False, "url": url, "error": "Timeout"}
-    
-    except Exception as e:
-        return {"success": False, "url": url, "error": str(e)}
-
-def index_minio_yamls(
-    yamls: List[str],
-    product: str,
+def dc_add_dataset(
+    yaml_paths: List[Union[str, Path]], 
     max_workers: int = 4,
-    show_progress: bool = True,
-) -> tuple[List[Dict[str, Any]], List[str]]:
-    """Indexes a list of MinIO YAML files using a thread pool.
-
-    This function processes a list of YAML file URLs, indexing each one using the
-    `index_minio_yaml` function with a specified product name. It utilizes a thread
-    pool for concurrent processing and provides progress updates.
-
-    Args:
-        yamls (List[str]): A list of YAML file URLs in MinIO.
-        product (str): The name of the product associated with the YAML files.
-        max_workers (int, optional): The maximum number of threads to use for processing. Defaults to 4.
-        show_progress (bool, optional): Whether to display a progress bar. Defaults to True.
-
-    Returns:
-        tuple[List[Dict[str, Any]], List[str]]: A tuple containing two lists:
-            - A list of dictionaries, where each dictionary represents the result of indexing a YAML file.
-            - A list of error messages encountered during processing.
+    ignore_lineage: bool = False,
+    confirm_ignore_lineage: bool = False,
+    verbose: bool = False
+) -> Tuple[List[str], List[str], List[Tuple[str, str]]]:
     """
-    execution_results = []
-    errors = []
+    Add multiple datasets to Open Data Cube in parallel using datacube CLI.
+    
+    Args:
+        yaml_paths: List of paths to YAML metadata files
+        max_workers: Maximum number of parallel workers (default: 4)
+        ignore_lineage: Add --ignore-lineage flag to skip lineage checks
+        confirm_ignore_lineage: Add --confirm-ignore-lineage flag
+        verbose: Print full command output for debugging
+        
+    Returns:
+        Tuple of (newly_added, already_indexed, failed_items) where 
+        failed_items contains (path, error_message)
+    """
+    newly_added = []
+    already_indexed = []
+    failed = []
+    
+    def add_single_dataset(yaml_path: Union[str, Path]) -> Tuple[str, str, str]:
+        """Add a single dataset and return status ('added'/'already'/'failed'), path, and message."""
+        yaml_path_str = str(yaml_path)
+        
+        try:
+            cmd = ["datacube", "dataset", "add"]
+            
+            if ignore_lineage:
+                cmd.append("--ignore-lineage")
+            if confirm_ignore_lineage:
+                cmd.append("--confirm-ignore-lineage")
+                
+            cmd.append(yaml_path_str)
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if result.returncode == 0:
+                output = result.stdout + result.stderr
+                
+                # Check if dataset was already indexed
+                if "already" in output.lower() or "exists" in output.lower():
+                    print(f"⊙ Already indexed: {yaml_path_str}")
+                    if verbose:
+                        print(f"  Output: {output.strip()}")
+                    return "already", yaml_path_str, output
+                else:
+                    print(f"✓ Successfully added: {yaml_path_str}")
+                    if verbose and output.strip():
+                        print(f"  Output: {output.strip()}")
+                    return "added", yaml_path_str, output
+            else:
+                error_msg = result.stderr or result.stdout
+                print(f"✗ Failed to add {yaml_path_str}: {error_msg}")
+                return "failed", yaml_path_str, error_msg
+                
+        except subprocess.TimeoutExpired:
+            error_msg = "Command timed out after 60 seconds"
+            print(f"✗ Timeout for {yaml_path_str}")
+            return "failed", yaml_path_str, error_msg
+        except Exception as e:
+            error_msg = str(e)
+            print(f"✗ Exception for {yaml_path_str}: {error_msg}")
+            return "failed", yaml_path_str, error_msg
+    
+    print(f"Starting to add {len(yaml_paths)} datasets with {max_workers} workers...")
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(index_minio_yaml, yaml, product): yaml for yaml in yamls}
+        # Submit all tasks
+        future_to_path = {executor.submit(add_single_dataset, path): path 
+                         for path in yaml_paths}
         
-        with _progress_bar_context(total=len(yamls), desc="Processing URLs", show_progress=show_progress, unit="url") as pbar:
-            for future in as_completed(futures):
-                result = future.result()
-                execution_results.append(result)                
-                pbar.update(1)
-                
-    return execution_results, errors
+        # Process completed tasks
+        for future in as_completed(future_to_path):
+            status, path, message = future.result()
+            if status == "added":
+                newly_added.append(path)
+            elif status == "already":
+                already_indexed.append(path)
+            else:  # failed
+                failed.append((path, message))
+    
+    print(f"\nCompleted: {len(newly_added)} newly added, {len(already_indexed)} already indexed, {len(failed)} failed")
+    
+    if failed:
+        print("\nFailed datasets:")
+        for path, error in failed:
+            print(f"  - {path}: {error[:100]}")
+    
+    return newly_added, already_indexed, failed
