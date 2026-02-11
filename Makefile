@@ -18,14 +18,13 @@
 ##   make purge-data  Delete local data in ./data (irreversible; requires CONFIRM=1)
 ##
 ## Mode selection:
-##   make up              # production mode (default, uses prebuilt images)
-##   make up MODE=dev     # dev mode (uses locally built images)
-##   export MODE=dev      # set dev mode for entire session
+##   export MODE=dev      # set dev mode for entire session, and then make *
+##   unset MODE           # set dev mode to prod mode, and then make *
 
-.PHONY: clean down help index index-parallel index-serie index-sentinel-2-l2a index-io-lulc-annual-v02 \
-        index-nasadem index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-sentinel-1-rtc init logs \
-        product pull purge-data shell setup status up update-explorer build build-nocache \
-        purge-all-users purge-user wait-for-db backup restore
+.PHONY: backup build build-nocache clean down help index index-io-lulc-annual-v02 \
+        index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-nasadem index-parallel \
+        index-sentinel-1-rtc index-sentinel-2-l2a index-serie init logs product pull purge-data \
+        purge-user purge-users release-push restore setup shell status up update-explorer wait-for-db
 .DEFAULT_GOAL := help
 
 # Mode selection: prod (default) or dev
@@ -34,7 +33,7 @@ MODE ?= prod
 # Local data location (bind-mounted into containers)
 DATA_DIR ?= $(CURDIR)/data
 
-# For destructive operations (purge-data)
+# For destructive operations (purge-data, purge-user(s), restore)
 CONFIRM ?= 0
 
 # Defaults (override on the command line: make BBOX="..." DATETIME="...")
@@ -107,40 +106,12 @@ endif
 index: index-parallel ## Index example data for the selected area/time (uses BBOX and DATETIME)
 	@true
 
-index-parallel: ## Index data using the automated script (recommended)
-ifeq ($(MODE),dev)
-	@MODE=dev bash index-parallel.sh
-else
-	@bash index-parallel.sh
-endif
-
-index-serie: ## Index data step-by-step (older method; slower)
-	@$(MAKE) index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
-	         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
-	         index-sentinel-1-rtc
-
-index-sentinel-2-l2a: # Index Sentinel-2 L2A
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='sentinel-2-l2a' \
-			--datetime='$(DATETIME)' \
-			--rename-product='s2_l2a'"
-
 index-io-lulc-annual-v02: # Index IO LULC Annual v02 (non-fatal if empty)
 	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
 			--bbox='$(BBOX)' \
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='io-lulc-annual-v02'" || true
-
-index-nasadem: # Index NASADEM
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='nasadem'"
 
 index-ls45_c2l2_sp: # Index Landsat 4/5 Collection 2 L2
 	@$(DC) run --rm --profile init bash -lc \
@@ -172,6 +143,20 @@ index-ls89_c2l2_sp: # Index Landsat 8/9 Collection 2 L2
             --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
             --rename-product='ls89_c2l2_sp'"
 
+index-nasadem: # Index NASADEM
+	@$(DC) --profile init run --rm jupyter bash -lc \
+		"stac-to-dc \
+			--bbox='$(BBOX)' \
+			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+			--collections='nasadem'"
+
+index-parallel: ## Index data using the automated script (recommended)
+ifeq ($(MODE),dev)
+	@MODE=dev bash index-parallel.sh
+else
+	@bash index-parallel.sh
+endif
+
 index-sentinel-1-rtc: # Index Sentinel-1 RTC
 	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
@@ -179,6 +164,20 @@ index-sentinel-1-rtc: # Index Sentinel-1 RTC
 			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
 			--collections='sentinel-1-rtc' \
 			--datetime='$(DATETIME)'"
+
+index-sentinel-2-l2a: # Index Sentinel-2 L2A
+	@$(DC) --profile init run --rm jupyter bash -lc \
+		"stac-to-dc \
+			--bbox='$(BBOX)' \
+			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+			--collections='sentinel-2-l2a' \
+			--datetime='$(DATETIME)' \
+			--rename-product='s2_l2a'"
+
+index-serie: ## Index data step-by-step (older method; slower)
+	@$(MAKE) index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
+	         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
+	         index-sentinel-1-rtc
 
 init: wait-for-db ## Initialize the Open Data Cube database (run once after setup)
 	@$(DC) --profile init run --rm jupyter datacube -v system init
@@ -191,6 +190,15 @@ product: ## Load product definitions into the database (describes available data
 
 pull: ## Download all service images (recommended before first run in prod mode)
 	@$(DC) pull
+
+purge-data: down ## Delete local data in ./data. Irreversible; requires CONFIRM=1
+	@echo "This will delete:"
+	@echo "  $(DATA_DIR)/jupyterhub_data/*"
+	@echo "  $(DATA_DIR)/local_data/*"
+	@echo "  $(DATA_DIR)/pg/*"
+	@echo "  $(DATA_DIR)/shared/*"
+	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
+	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/jupyterhub_data/* /data/local_data/* /data/pg/* /data/shared/*" || true
 
 purge-user: ## Remove a specific user container, volume and shared data (usage: make purge-user HUB_USER=username). Irreversible; requires CONFIRM=1
 	@if [ -z "$(HUB_USER)" ]; then echo "Error: HUB_USER argument is required. Usage: make purge-user HUB_USER=<username>"; exit 1; fi
@@ -207,16 +215,9 @@ purge-users: ## Remove all spawned JupyterHub user containers, volumes and share
 	@docker volume ls -q --filter "name=^jupyterhub-user-" | xargs -r docker volume rm
 	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/shared/*" || true
 
-purge-data: down ## Delete local data in ./data (pg and local_data). Irreversible; requires CONFIRM=1
-	@echo "This will delete:"
-	@echo "  $(DATA_DIR)/jupyterhub_data/*"
-	@echo "  $(DATA_DIR)/local_data/*"
-	@echo "  $(DATA_DIR)/pg/*"
-	@echo "  $(DATA_DIR)/shared/*"
-	@if [ "$(CONFIRM)" != "1" ]; then echo "Refusing to run without CONFIRM=1"; exit 1; fi
-	@docker run --rm -v "$(DATA_DIR):/data" alpine:3.23.2 sh -c "rm -rf /data/jupyterhub_data/* /data/local_data/* /data/pg/* /data/shared/*" || true
-
 release-push: ## Build and push multi-architecture production images to the configured container registry
+	@echo "Ensuring QEMU emulation support..."
+	@docker run --privileged --rm tonistiigi/binfmt --install all
 	@echo "Tag: $(DATE_YYYYMMDD)"
 	TAG=$(DATE_YYYYMMDD) docker buildx bake release --push
 

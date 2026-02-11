@@ -1,6 +1,23 @@
+# =============================================================================
+# YAML Anchors - Reusable configuration blocks
+# =============================================================================
+
+# Open Data Cube database connection environment variables
+# Used by jupyter, jupyterhub, and explorer services to connect to PostgreSQL
+x-odc-db-env: &odc-db-env
+  POSTGRES_HOSTNAME: ${POSTGRES_HOSTNAME}
+  POSTGRES_PORT: ${POSTGRES_PORT}
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASS: ${POSTGRES_PASS}
+  POSTGRES_DBNAME: ${POSTGRES_DBNAME}
+
+# =============================================================================
+# Services
+# =============================================================================
+
 services:
   traefik:
-    image: traefik:v3.6.6
+    image: traefik:v3.6.7
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -33,7 +50,7 @@ services:
     volumes:
       - ./data/pg:/var/lib/postgresql/
     healthcheck:
-      test: [ "CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p 5432" ]
+      test: [ "CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p ${POSTGRES_PORT}" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -44,18 +61,20 @@ services:
     networks:
       - backend
 
+  # ---------------------------------------------------------------------------
+  # Jupyter - Used for initialization tasks (product definitions, indexing)
+  # Profile: init (only started when explicitly needed)
+  # ---------------------------------------------------------------------------
   jupyter:
     profiles: [ init ]
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260203
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:${IMAGE_VERSION}
     init: true
     environment:
-      - ODC_DEFAULT_DB_HOSTNAME=postgres
-      - ODC_DEFAULT_DB_PORT=5432
-      - ODC_DEFAULT_DB_USERNAME=${POSTGRES_USER}
-      - ODC_DEFAULT_DB_PASSWORD=${POSTGRES_PASS}
-      - ODC_DEFAULT_DB_DATABASE=${POSTGRES_DBNAME}
-      - AWS_NO_SIGN_REQUEST=true
-      - STAC_API_URL=https://explorer.sandbox.dea.ga.gov.au/stac/
+      # ODC database connection (using YAML anchor)
+      <<: *odc-db-env
+      # Additional environment variables
+      ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${POSTGRES_DBNAME}
+      AWS_NO_SIGN_REQUEST: "true"
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,12 +88,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    restart: no
+    restart: "no"
     networks:
       - backend
 
+  # ---------------------------------------------------------------------------
+  # JupyterHub - Multi-user notebook server with Docker-out-of-Docker spawning
+  # ---------------------------------------------------------------------------
   jupyterhub:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-hub:20260203
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-hub:${IMAGE_VERSION}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
@@ -82,20 +104,21 @@ services:
       - ./shared:/shared_static:ro
       - ./data/shared:/shared_users
     environment:
-      - JUPYTERHUB_ADMINS=${JUPYTERHUB_ADMINS}
-      - JUPYTERHUB_USERS=${JUPYTERHUB_USERS}
-      - DOCKER_JUPYTER_IMAGE=git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:20260203
-      - DOCKER_NETWORK_NAME=${COMPOSE_PROJECT_NAME}-backend
-      - POSTGRES_DBNAME=${POSTGRES_DBNAME}
-      - POSTGRES_PASS=${POSTGRES_PASS}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - HOST_PRODUCTS_DIR=${PWD}/products
-      - HOST_DATA_DIR=${PWD}/data/local_data
-      - HOST_DISTRIBUTED_CONFIG=${PWD}/distributed.yaml
-      # Static shared content: notebooks_demo, README.md, etc.
-      - HOST_SHARED_STATIC=${PWD}/shared
-      # User-specific folders stored in ./data/shared but mounted at /notebooks/shared/all_users
-      - HOST_USER_FOLDERS=${PWD}/data/shared
+      # ODC database connection (using YAML anchor)
+      <<: *odc-db-env
+      # User management
+      JUPYTERHUB_ADMINS: ${JUPYTERHUB_ADMINS}
+      JUPYTERHUB_USERS: ${JUPYTERHUB_USERS}
+      # Docker spawner configuration
+      DOCKER_JUPYTER_IMAGE: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:${IMAGE_VERSION}
+      DOCKER_NETWORK_NAME: ${COMPOSE_PROJECT_NAME}-backend
+      # HOST_* variables: Required for Docker-out-of-Docker pattern
+      # JupyterHub spawns user containers and needs to know the HOST paths to mount them
+      HOST_PRODUCTS_DIR: ${PWD}/products
+      HOST_DATA_DIR: ${PWD}/data/local_data
+      HOST_DISTRIBUTED_CONFIG: ${PWD}/distributed.yaml
+      HOST_SHARED_STATIC: ${PWD}/shared
+      HOST_USER_FOLDERS: ${PWD}/data/shared
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,24 +143,26 @@ services:
       - "traefik.http.services.jupyterhub.loadbalancer.server.port=8000"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
+  # ---------------------------------------------------------------------------
+  # Explorer - Web UI for browsing Open Data Cube datasets
+  # ---------------------------------------------------------------------------
   explorer:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:20260203
+    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:${IMAGE_VERSION}
     environment:
-      - POSTGRES_HOSTNAME=postgres
-      - PGPORT=5432
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASS}
-      - POSTGRES_DB=${POSTGRES_DBNAME}
-      - ODC_DEFAULT_INDEX_DRIVER=postgres
-      - ODC_POSTGIS_INDEX_DRIVER=postgis
-      - ODC_DEFAULT_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@postgres:5432/${POSTGRES_DBNAME}
-      - ODC_POSTGIS_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@postgres:5432/${POSTGRES_DBNAME}
-      - FLASK_ENV=development
-      - FLASK_APP=cubedash
-      - FLASK_DEBUG=1
-      - CUBEDASH_DEFAULT_TIMEZONE=Europe/Zurich
-      - SCRIPT_NAME=/explorer
-      - CUBEDASH_BASE_URL=/explorer
+      # ODC database connection (using YAML anchor)
+      <<: *odc-db-env
+      # ODC configuration
+      ODC_DEFAULT_INDEX_DRIVER: postgres
+      ODC_POSTGIS_INDEX_DRIVER: postgis
+      ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${POSTGRES_DBNAME}
+      ODC_POSTGIS_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${POSTGRES_DBNAME}
+      # Flask configuration
+      FLASK_ENV: development
+      FLASK_APP: cubedash
+      FLASK_DEBUG: 1
+      CUBEDASH_DEFAULT_TIMEZONE: Europe/Zurich
+      SCRIPT_NAME: /explorer
+      CUBEDASH_BASE_URL: /explorer
     depends_on:
       postgres:
         condition: service_healthy
@@ -145,6 +170,9 @@ services:
         condition: service_healthy
     volumes:
       - ./data/local_data:/local_data
+      # CUSTOM PATCHES: These files add Planetary Computer integration (sign_url function)
+      # Permanent customization - mounted directly into site-packages for development flexibility
+      # TODO: Consider forking datacube-explorer if these patches become more extensive
       - ./datacube-explorer/cubedash/_utils.py:/app/lib/python3.12/site-packages/cubedash/_utils.py
       - ./datacube-explorer/cubedash/_api.py:/app/lib/python3.12/site-packages/cubedash/_api.py
     healthcheck:
@@ -166,6 +194,11 @@ services:
       - "traefik.http.services.explorer.loadbalancer.server.port=8080"
       - "traefik.docker.network=${COMPOSE_PROJECT_NAME}-traefik"
 
+# =============================================================================
+# Networks
+# =============================================================================
+# Explicit network names with project prefix to support multiple instances
+# (e.g., running dev and prod simultaneously)
 networks:
   traefik:
     name: ${COMPOSE_PROJECT_NAME}-traefik

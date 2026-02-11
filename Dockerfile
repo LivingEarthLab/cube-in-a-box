@@ -1,8 +1,8 @@
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.12.1
 
 LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
-      org.opencontainers.image.description="The Cube in a Box is a simple way to run the Open Data Cube." \
-      org.opencontainers.image.licenses="MIT"
+    org.opencontainers.image.description="The Cube in a Box is a simple way to run the Open Data Cube." \
+    org.opencontainers.image.licenses="MIT"
 
 # Environment setup
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -52,7 +52,7 @@ RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel && \
     pip3 install --no-cache-dir --requirement /tmp/requirements.txt && \
     rm -f /tmp/requirements.txt
 
-# Copy start script
+# Copy start script (handles /local_data ownership, sudo permissions, and switching to jupyter user)
 COPY scripts/start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 

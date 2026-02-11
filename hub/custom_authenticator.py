@@ -1,3 +1,11 @@
+"""
+JupyterHub custom authenticator for restricting user signups.
+
+This module contains a custom authenticator and signup handler that overrides
+the default NativeAuthenticator behavior. It validates new signups against
+an allowed list of users defined in the JupyterHub configuration, preventing
+unauthorized account creation while still allowing open signups for approved users.
+"""
 from nativeauthenticator import NativeAuthenticator
 from nativeauthenticator.handlers import SignUpHandler, LocalBase
 from tornado import web
