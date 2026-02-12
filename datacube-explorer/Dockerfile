@@ -1,9 +1,10 @@
 # syntax=docker/dockerfile:1
+# Multi arch build to guarantee cubedash patch will work -> To be updated when official release is out
 FROM git.unepgrid.ch/nostradamus/explorer:3.1.2@sha256:9d4a5f81c167ac45156830c93b7c27bf42bee19d09c91b85dc1482dbdf88f88c AS runtime
 
 LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
-      org.opencontainers.image.description="Datacube Explorer with planetary-computer support" \
-      org.opencontainers.image.licenses="Apache-2.0"
+    org.opencontainers.image.description="Datacube Explorer with planetary-computer support" \
+    org.opencontainers.image.licenses="Apache-2.0"
 
 # Bring a real uv binary (the base image may have a 0-byte uv in deployment builds)
 FROM ghcr.io/astral-sh/uv:0.9.21@sha256:15f68a476b768083505fe1dbfcc998344d0135f0ca1b8465c4760b323904f05a AS uv
@@ -22,6 +23,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install "planetary-computer"
 
 COPY ./cubedash/_utils.py /app/lib/python3.12/site-packages/cubedash/_utils.py
+COPY ./cubedash/_api.py /app/lib/python3.12/site-packages/cubedash/_api.py
 
 # Final image: keep base entrypoint/CMD; only ship the updated /app environment
 FROM runtime

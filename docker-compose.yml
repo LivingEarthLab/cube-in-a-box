@@ -57,7 +57,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     ports:
-      - 5432:5432
+      - 5432:${POSTGRES_PORT}
     networks:
       - backend
 
@@ -170,11 +170,6 @@ services:
         condition: service_healthy
     volumes:
       - ./data/local_data:/local_data
-      # CUSTOM PATCHES: These files add Planetary Computer integration (sign_url function)
-      # Permanent customization - mounted directly into site-packages for development flexibility
-      # TODO: Consider forking datacube-explorer if these patches become more extensive
-      - ./datacube-explorer/cubedash/_utils.py:/app/lib/python3.12/site-packages/cubedash/_utils.py
-      - ./datacube-explorer/cubedash/_api.py:/app/lib/python3.12/site-packages/cubedash/_api.py
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/explorer/" ]
       interval: 10s

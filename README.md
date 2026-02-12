@@ -131,6 +131,9 @@ This repository uses environment variables to configure the local domain, databa
 | Variable              | Required | Default (as provided)  | Example                    | Description                                                   |
 | --------------------- | -------: | ---------------------- | -------------------------- | ------------------------------------------------------------- |
 | `DOMAIN`              |      Yes | `localhost`            | `localhost`                | Hostname used to access the web endpoints (Jupyter/Explorer). |
+| `IMAGE_VERSION`       |      Yes | `20260211`             | `20260211`                 | Version of the images to use.                                 |
+| `POSTGRES_HOSTNAME`   |      Yes | `postgres`             | `postgres`                 | Hostname used to access the PostgreSQL database.              |
+| `POSTGRES_PORT`       |      Yes | `5432`                 | `5432`                     | Port used to access the PostgreSQL database.                  |
 | `POSTGRES_DBNAME`     |      Yes | `opendatacube`         | `opendatacube`             | PostgreSQL database name used by Open Data Cube.              |
 | `POSTGRES_USER`       |      Yes | `opendatacube`         | `opendatacube`             | PostgreSQL user for the Open Data Cube database.              |
 | `POSTGRES_PASS`       |      Yes | `opendatacubepassword` | `a-strong-password`        | PostgreSQL password for the Open Data Cube database.          |
@@ -419,7 +422,7 @@ docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup 
 
 This project is licensed under the **MIT License**.
 
-**Copyright © 2025 UNIGE/GRID**
+**Copyright © 2025 UNIGE/GRID-Geneva**
 
 You are free to use, modify, and distribute this software under the terms of the MIT License.
 For more details, see the full license text: [MIT](https://opensource.org/license/mit).
