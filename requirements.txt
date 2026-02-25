@@ -33,16 +33,20 @@ wget
 xarray
 
 # Jupyter components
-dask-labextension
+black
 folium
 ipyleaflet
 ipywidgets
-# jupyter==1.0.0
-jupyter-server-proxy
-jupyterlab
-jupyterlab_widgets
+isort
 jupyterhub==5.4.3
+jupyterlab
 jupytext
+dask-labextension
+jupyter-archive
+jupyter-server-proxy
+jupyterlab-code-formatter
+jupyterlab-execute-time
+jupyterlab_widgets
 
 # Testing
 pytest
