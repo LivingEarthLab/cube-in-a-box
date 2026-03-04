@@ -14,7 +14,8 @@ This directory contains a collection of Jupyter notebooks demonstrating various 
 
 | Notebook | Description | Key Modules/Tools |
 | :--- | :--- | :--- |
-| **[ESRI_Land_Cover.ipynb](./ESRI_Land_Cover.ipynb)** | Demonstrates loading and plotting ESRI Land Cover data. | `datacube` |
+| **[ESRI_Land_Cover.ipynb](./ESRI_Land_Cover.ipynb)** | Demonstrates loading and plotting ESRI Land Cover data. | `datacube`, `matplotlib` |
+| **[ESA_Worldcover.ipynb](./ESA_Worldcover.ipynb)** | Demonstrates loading and plotting ESA Worldcover data. | `datacube`, `matplotlib` |
 | **[Landsat_Collection_2_Level-2_Science_Products.ipynb](./Landsat_Collection_2_Level-2_Science_Products.ipynb)** | Covers processing Landsat C2 L2 products, including DN to SR conversion. | `datacube`, `dask` |
 | **[NASADEM.ipynb](./NASADEM.ipynb)** | Focuses on loading NASADEM products and computing hillshade for elevation display. | `datacube`, `matplotlib`, `rich_dem` |
 | **[Sentinel_1_rtc.ipynb](./Sentinel_1_rtc.ipynb)** | Covers loading and exporting Sentinel-1 Radiometrically Terrain Corrected (RTC) images. | `datacube`, `odc.geo.xr.write_cog` |

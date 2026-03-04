@@ -1,0 +1,35 @@
+# source: https://raw.githubusercontent.com/opendatacube/datacube-dataset-config/master/products/io_lulc_9_class.odc-product.yaml
+
+---
+name: esa_worldcover
+description: The European Space Agency (ESA) WorldCover global land cover maps at 10 meter resolution.
+metadata_type: eo3
+
+metadata:
+  product:
+    name: esa_worldcover
+
+measurements:
+  - name: "map"
+    aliases: [classification]
+    units: "1"
+    dtype: uint8
+    nodata: 0
+    flags_definition:
+      data:
+        bits: [0, 1, 2, 3, 4, 5, 6, 7]
+        description: Land Use/Land Cover class
+        values:
+          0: no data
+          10: tree cover
+          20: shrubland
+          30: grassland
+          40: cropland
+          50: built-up
+          60: bare/sparse vegetation
+          70: snow/ice
+          80: permanent water bodies
+          90: herbaceous wetland
+          95: mangroves
+          100: moss/lichen
+

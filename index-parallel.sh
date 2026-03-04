@@ -18,6 +18,7 @@ products=(
   ls7_c2l2_sp
   ls89_c2l2_sp
   sentinel-1-rtc
+  esa-worldcover
 )
 
 # Hardcoded parallelism

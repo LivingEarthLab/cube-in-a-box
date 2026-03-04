@@ -21,7 +21,7 @@
 ##   export MODE=dev      # set dev mode for entire session, and then make *
 ##   unset MODE           # set dev mode to prod mode, and then make *
 
-.PHONY: backup build build-nocache clean down help index index-io-lulc-annual-v02 \
+.PHONY: backup build build-nocache clean down help index index-esa-worldcover index-io-lulc-annual-v02 \
         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-nasadem index-parallel \
         index-sentinel-1-rtc index-sentinel-2-l2a index-serie init logs product pull purge-data \
         purge-user purge-users release-push restore setup shell status up update-explorer wait-for-db
@@ -106,6 +106,13 @@ endif
 index: index-parallel ## Index example data for the selected area/time (uses BBOX and DATETIME)
 	@true
 
+index-esa-worldcover: ## Index ESA WorldCover (non-fatal if empty)
+	@$(DC) --profile init run --rm jupyter bash -lc \
+		"stac-to-dc \
+			--bbox='$(BBOX)' \
+			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
+			--collections='esa-worldcover'" || true
+
 index-io-lulc-annual-v02: # Index IO LULC Annual v02 (non-fatal if empty)
 	@$(DC) --profile init run --rm jupyter bash -lc \
 		"stac-to-dc \
@@ -114,7 +121,7 @@ index-io-lulc-annual-v02: # Index IO LULC Annual v02 (non-fatal if empty)
 			--collections='io-lulc-annual-v02'" || true
 
 index-ls45_c2l2_sp: # Index Landsat 4/5 Collection 2 L2
-	@$(DC) run --rm --profile init bash -lc \
+	@$(DC) --profile init run --rm jupyter bash -lc \
         "stac-to-dc \
             --bbox='$(BBOX)' \
             --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
@@ -177,7 +184,7 @@ index-sentinel-2-l2a: # Index Sentinel-2 L2A
 index-serie: ## Index data step-by-step (older method; slower)
 	@$(MAKE) index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
 	         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
-	         index-sentinel-1-rtc
+	         index-sentinel-1-rtc index-esa-worldcover
 
 init: wait-for-db ## Initialize the Open Data Cube database (run once after setup)
 	@$(DC) --profile init run --rm jupyter datacube -v system init
