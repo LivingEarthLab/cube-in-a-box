@@ -1,0 +1,7 @@
+# Security Best Practices
+
+1. **Use strong passwords** for admin accounts
+2. **Regularly review** the user list in the admin panel
+3. **Remove unused accounts** to minimize security risks
+4. **Backup user data** regularly (see Backup and Restore section)
+5. **Keep admin users minimal** - only trusted users should have admin access

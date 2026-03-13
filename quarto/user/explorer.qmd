@@ -1,0 +1,21 @@
+# Exploring Data
+
+The **CiaB Explorer** is a visual web interface (`http://<DOMAIN>/explorer`) that allows to discover what data is currently indexed and available without writing a single line of code.
+
+## Key Features
+- **Product Metadata**: View detailed descriptions of each dataset (e.g., Sentinel-2, Landsat).
+- **Spatial Extent**: See a map overview of the geographic areas covered by the data.
+- **Temporal Coverage**: Check the available time ranges for each product.
+- **Individual Scenes**: Click through to see individual granules and their specific capture times.
+- **Download Data**: Download data.
+
+## How to browse and optionally download data
+1. **Select a Product**: Use the dropdown menu or the sidebar to choose a dataset (e.g., `s2_l2a` for Sentinel-2).
+2. **Filter by Time**: Use the timeline or calendar overview to find specific dates.
+3. **Inspect Metadata**: Check the `DATASETS` option, and click on any geographic box to see the scene metadata.
+4. **Download Data**: Click on the urls of the files (single-band GeoTIFFs) to download in the `Location` section.
+
+::: {.callout-tip}
+## Tip
+Use the Explorer to verify if the data you need is available before starting a heavy ODC loading process in your notebook.
+:::

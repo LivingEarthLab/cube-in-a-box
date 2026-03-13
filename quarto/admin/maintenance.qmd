@@ -1,0 +1,58 @@
+# Backup and Restore
+
+The `./data/` subdirectories contain persistent data and should be backed up regularly:
+
+- `./data/pg/` - PostgreSQL database files
+- `./data/local_data/` - Local data cache
+- `./data/jupyterhub_data/` - JupyterHub configuration and user data
+
+User notebooks are stored in Docker volumes named `jupyterhub-user-<username>`
+
+
+This chapter describes how to backup and restore the CiaB Database and user volumes to and from the `./backups/` directory.
+
+## Database backup procedure
+
+**Database backup**:
+
+To create a backup of your PostgreSQL database:
+
+```bash
+make backup
+```
+
+This will create a timestamped SQL dump file in the `./backups` directory.  
+Example: `./backups/opendatacube_20260121_141530.sql`.
+
+**Restore Database**:
+
+To restore a database from a backup file:
+
+```bash
+make restore BACKUP_FILE=./backups/opendatacube_20260121_141530.sql CONFIRM=1
+```
+
+::: {.callout-warning}
+## Notes
+Restoring will overwrite your current database. Make sure you have a recent backup before proceeding.
+:::
+
+## Volume backup procedure
+
+**Manual volume backup:**
+
+```bash
+# Backup user notebooks
+docker run --rm -v jupyterhub-user-<username>:/source -v $(pwd)/backups:/backup alpine tar czf /backup/user-<username>-notebooks.tar.gz -C /source .
+
+# Backup all data directories
+tar czf backups/data-backup-$(date +%Y%m%d).tar.gz ./data/
+```
+
+**Restore user notebooks:**
+
+```bash
+# Restore user notebooks
+docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-<username>-notebooks.tar.gz -C /target
+```
+

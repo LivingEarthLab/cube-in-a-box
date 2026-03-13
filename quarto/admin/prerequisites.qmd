@@ -1,0 +1,32 @@
+# Prerequisites
+
+This project is run via `docker compose` and a `Makefile`. Ensure your system meets the following requirements before starting:
+
+## Linux
+- **Docker Engine**: [Official Instructions](https://docs.docker.com/engine/install/).
+- **Docker Compose**: Usually included with Docker Engine.
+- **GNU Make**: Install via your package manager (e.g. `sudo apt update && sudo apt install make`).
+
+## macOS
+- **Docker Desktop**: [Official Instructions](https://docs.docker.com/desktop/setup/install/mac-install/).
+- **Make**: Available via Xcode Command Line Tools (`xcode-select --install`).
+
+## Windows (WSL2 Recommended)
+1. **WSL2**: Install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install) and a Linux distribution (e.g., Ubuntu).
+2. **Docker Desktop**: Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/). In settings, enable **Use WSL2 based engine** and **WSL Integration** for your Linux distribution.
+3. **Make**: Open your WSL terminal and install Make (`sudo apt update && sudo apt install -y make`).
+
+   ::: {.callout-tip}
+   ## Notes
+   - Run all `make ...` commands **from the WSL terminal** (not PowerShell) to ensure a consistent Linux-like environment.
+   - Instead of keeping this project in your regular Windows folders (like your `C:` drive, which appears as `/mnt/c/...` in Linux), save it directly inside your Linux environment (for example, in a `~/projects/` folder). This will make the system run much faster.
+   :::
+
+## Quick verification
+
+Once installed, you should be able to run:
+```bash
+make --version
+docker --version
+docker compose version
+```

@@ -1,0 +1,32 @@
+# Overview
+
+Welcome to the **Nostradamus Cube-in-a-Box User Guide**. This manual is designed to help you navigate and use the Open Data Cube (ODC) platform for geospatial analysis and remote sensing.
+
+## What is Nostradamus Cube-in-a-box (CiaB)?
+The Nostradamus CiaB is a specialized instance of the [Open Data Cube](https://opendatacube.org/), packaged for rapid deployment and accessibility. It provides a pre-configured environment with all the necessary tools to:
+
+- Browse massive collections of satellite imagery.
+- Run Python-based geospatial analysis using Jupyter Notebooks.
+- Share results and collaborate with other researchers.
+
+## Core Platforms
+
+To interact with the system, you will primarily use two web interfaces:
+
+1.  **Jupyter**: `http://<DOMAIN>/jupyter/`
+    - Your primary analytical workspace.
+    - Write and execute Python notebooks.
+    - Access a persistent Linux home directory.
+
+2.  **Explorer**: `http://<DOMAIN>/explorer`
+    - A visual web interface to browse available datasets.
+    - Filter products by area and time.
+    - View spatial and temporal coverage of indexed data.
+    - Download data.
+
+---
+
+## How to use this guide
+If you are a new user, start with the [**Account Setup**](setup.qmd#account-setup) section to gain access. Once authorized, explore the [**Workspace**](workspace.qmd#your-jupyter-workspace) and [**Explorer**](explorer.qmd#exploring-data) sections to understand how to interact with the data. 
+
+For ready-to-use analysis templates, refer to the [**Data Products**](products.qmd#data-products) chapter which links directly to demonstration notebooks.

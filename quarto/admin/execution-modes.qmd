@@ -1,0 +1,62 @@
+# Execution Modes
+
+Nostradamus Cube-in-a-Box supports two execution modes: **Production** (`prod`) and **Development** (`dev`). The `MODE` environment variable determines which Docker Compose configuration is used.
+
+| Mode | Purpose | Image Source | Compose Files |
+| :--- | :--- | :--- | :--- |
+| **Production** (`prod`) | Standard deployment (default). | Pre-built remote images. | `docker-compose.yml` |
+| **Development** (`dev`) | Local testing and modifications. | Locally built images (`:dev`). | `+ docker-compose.dev.yml` |
+: Execution modes comparison {#tbl-execution-modes}
+
+## Production Mode (`prod`)
+
+This is the default mode. It pulls official images from the registry and is optimized for stability.
+
+```bash
+# Explicitly set (optional)
+export MODE=prod
+make up
+```
+
+## Development Mode (`dev`)
+
+Use this mode to modify Dockerfiles or core configurations. In this mode, `make setup` builds images locally instead of pulling them.
+
+
+**Method 1: Session-wide (Recommended)**
+
+This ensures all subsequent `make` commands (up, status, logs, etc.) use the correct mode.
+
+```bash
+export MODE=dev
+make setup
+make up
+```
+
+**Method 2: One-off Command**
+
+You can pass the variable directly, but you must remember to include it in **every** command.
+
+```bash
+make up MODE=dev
+make status MODE=dev
+```
+
+**Switching Back**
+
+To return to production mode:
+
+```bash
+unset MODE
+# or
+export MODE=prod
+```
+
+## Verification
+
+Run `make help` to verify the active mode:
+
+```text
+Current mode: dev
+...
+```

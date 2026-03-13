@@ -1,0 +1,21 @@
+# Repository Structure
+
+**Core Files:**
+
+- `Makefile`: Main entry point for commands (setup, indexing, maintenance).
+- `docker-compose.yml` / `docker-compose.dev.yml`: Service definitions for prod and dev environments.
+- `.env.default` / `.env`: Environment variables for system configuration.
+- `Dockerfile` / `docker-bake.hcl`: Definitions for building the Docker images.
+- `index-parallel.sh`: Script automating the parallel indexing of data.
+- `requirements.txt`: Python package dependencies for the Jupyter environment.
+- `distributed.yaml`: Configuration for distributed Dask processing.
+
+**Key Directories:**
+
+- `data/`: Database storage, local files, and user workspaces.
+- `datacube-explorer/`: Web UI configuration and customization.
+- `hub/`: JupyterHub setup, authentication, and Docker spawner logic.
+- `products/`: Open Data Cube product definitions.
+- `quarto/`: Documentation source (including this manual).
+- `scripts/`: Data processing and system maintenance utilities.
+- `shared/`: Read-only templates and shared data for all JupyterHub users.

@@ -1,0 +1,23 @@
+# Account Setup
+
+Access to the Nostradamus CiaB is restricted to authorized users. Follow these steps to create your account and gain access.
+
+::: {.callout-warning}
+## Note
+Before you can sign up, your username must be pre-authorized by a system administrator. If you have not yet been authorized, please contact your project coordinator.
+:::
+
+## Self-Service Signup
+Once you have been notified that your username is authorized:
+
+1.  Visit the **Signup Page**: `http://<DOMAIN>/jupyter/hub/signup`.
+2.  Enter your **Username** (must match exactly the one authorized).
+3.  Choose a secure **Password** (you will have to enter it twice).
+4.  Submit the form.
+
+If successful, you will see a message: *"The signup was successful! You can now go to the home page and log in to the system."*
+
+## Login
+1.  Navigate to the **Login Page**: `http://<DOMAIN>/jupyter/hub/login`.
+2.  Log in with your credentials.
+3.  Your Jupyter server will begin to spawn. This may take a few seconds on the first run.

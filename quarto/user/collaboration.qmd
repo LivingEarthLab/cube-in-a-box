@@ -1,0 +1,24 @@
+# Collaboration
+
+Geospatial science is often a collaborative effort. The Nostradamus Cube provides specialized shared directories to facilitate teamwork and resource sharing.
+
+## The `./shared/` Directory
+
+This directory is accessible to all users on the platform.
+
+### Read-Only Demonstrations Notebooks
+The root of the `./shared/` directory usually contains files users want to share, and documentation (like the `notebooks_demo` directory). These files are **read-only** to ensure the core examples remain unchanged for everyone.
+
+### User Sharing (`./shared/all_users/`)
+Under `./shared/all_users/`, you will find directories for each users.
+
+- **Transparency**: You can browse directories and files made available by your colleagues.
+- **Sharing**: To share a notebook or other files, place a copy in your own shared directory under `./shared/all_users/<your-username>/`.
+- **Read-Only Access**: You can read and copy files from other users' directories, but you cannot edit or delete them.
+
+::: {.callout-tip}
+## Best Practices for Sharing
+- **Communicate**: If you share a draft, add "DRAFT", a date (e.g. 20260320) or a version number to the filename.
+- **Privacy**: Only move files to `./shared/all_users/<your-username>/` that you are comfortable having the entire team see.
+- **Security**: Never share notebooks containing hard-coded API keys, passwords, or personal credentials.
+:::

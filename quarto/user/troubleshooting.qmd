@@ -1,0 +1,32 @@
+# Troubleshooting
+
+While the system is designed to be stable, you may occasionally encounter issues. Below are solutions to common problems.
+
+## Common Issues
+
+### Server Won't Spawn
+**Symptoms**: After logging in, the loading bar gets stuck, or you see a "Spawn failed" error.  
+**Cause**: The system might be under heavy load, or a previous session didn't shut down correctly.  
+**Solution**: Wait for 30 seconds and refresh the page. If it persists, go to the **Hub Control Panel** (if accessible) and click **Stop My Server**, then **Start My Server**.  
+
+### Database Timeout ("Gateway Timeout")
+**Symptoms**: JupyterLab loads, but running a cell with `dc.load()` or `dc.list_products()` hangs for a long time and then fails.  
+**Cause**: Usually occurs if the database is busy indexing new data or undergoing maintenance.  
+**Solution**: Restart your kernel (**Kernel** -> **Restart Kernel...**) and try again.
+
+### "Read-only file system"
+**Symptoms**: You cannot save changes to a notebook.  
+**Cause**: You are likely trying to edit a file directly in the `./shared/` directory.  
+**Solution**: Copy the file to Jupyter home directory (`./`) as explained in the [Collaboration](collaboration.qmd) chapter.
+
+## How to Reset Your Environment
+If your workspace is behaving unpredictably or you have installed incompatible Python packages:
+
+1.  Stop your server via the Hub Control Panel.  
+2.  Log out and log back in.  
+3.  If issues persist, contact an administrator to have your user volume cleared (Note: This will delete your notebooks, so ensure you have a [backup](workspace.qmd#data-backup-restore)).
+
+::: {.callout-warning}
+## Note
+Always check the **Explorer** first. If the Explorer is down, it is likely a system-wide maintenance issue.
+:::

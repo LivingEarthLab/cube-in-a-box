@@ -1,0 +1,47 @@
+project:
+  type: book
+  output-dir: ../../docs/user
+  pre-render:
+    - cp ../../LICENSE ./LICENSE.txt
+    - cp ../../license-MIT.png ./license-MIT.png
+
+filters:
+  - ../git-icon.lua
+
+book:
+  title: "Nostradamus Cube-in-a-Box - User Guide"
+  author: "Bruno Chatenoux"
+  date: "2026-03-09"
+  downloads: [pdf]
+  navbar:
+    left:
+      # - text: "User Guide"
+      #   href: index.qmd
+      - text: "| Admin Guide"
+        href: ../../admin/_book/index.html
+  chapters:
+    - index.qmd
+    - setup.qmd
+    - workspace.qmd
+    - explorer.qmd
+    - products.qmd
+    - collaboration.qmd
+    - troubleshooting.qmd
+    - license.qmd
+
+format:
+  html:
+    theme: yeti
+    page-layout: full
+    grid:
+      body-width: 1200px
+      margin-width: 300px
+  pdf:
+    pdf-engine: xelatex
+    mainfont: "Open Sans"
+    fontsize: 11pt
+    colorlinks: true
+    filters: 
+      - ../links-to-footnotes.lua
+    documentclass: scrreport
+    include-in-header: ../yeti-latex.tex

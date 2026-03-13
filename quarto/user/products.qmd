@@ -1,0 +1,42 @@
+# Data Products
+
+The Nostradamus Cube comes pre-loaded with several high-value geospatial datasets. To help you get started quickly, we provide a collection of **Demonstration Notebooks** located in `./shared/notebooks_demo/`.
+
+## Available Datasets
+Common products indexed in the system include:
+
+- **Sentinel-2**: Level 2A (Surface Reflectance).
+- **Sentinel-1**: RTC (Radar Backscatter).
+- **Landsat**: Collection 2 Level-2.
+- **Land Cover**: ESRI and ESA Worldcover products.
+- **Elevation**: NASADEM.
+
+::: {.callout-tip}
+## Note
+You will find more information in `./shared/notebooks_demo/README.md`.
+:::
+
+## Learning by Example
+The best way to learn how to load and process these products is to explore the `./shared/notebooks_demo` directory in your Jupyter workspace.
+
+### Core Demo Notebooks:
+- `Sentinel_2.ipynb`: Instructions for loading and visualizing Sentinel-2 data.
+- `Sentinel_1_rtc.ipynb`: Working with Radar data.
+- `Landsat_Collection_2_Level-2_Science_Products.ipynb`: Comprehensive guide for Landsat.
+- `ESRI_Land_Cover.ipynb` & `ESA_Worldcover.ipynb`: Using classification maps.
+- `NASADEM.ipynb`: Working with digital elevation models.
+
+
+
+### How to use these Notebooks:
+1.  Navigate to `./shared/notebooks_demo/` in your Jupyter file browser.
+2.  **Copy** the notebook you are interested in (Right-click -> Copy).
+3.  **Paste** it into jupyter root directory.
+4.  Open your copy and start experimenting!
+
+::: {.callout-tip}
+## Notes
+- You can edit and execute `.ipynb` files directly in the `./shared/notebooks_demo` directory, but not save any changes.
+- To save any changes, copy the notebook and any potential dependent files to your root directory first (or shared personal directory).
+:::
+

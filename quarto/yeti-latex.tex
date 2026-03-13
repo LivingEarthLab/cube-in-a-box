@@ -1,0 +1,45 @@
+% ============================================================
+% Yeti PDF Theme
+% Matches the Bootstrap/Yeti HTML theme as closely as possible
+% ============================================================
+
+\usepackage{xcolor}
+\usepackage[a4paper, top=2cm, bottom=2cm, left=2cm, right=2cm, footskip=0.5cm]{geometry}
+\usepackage{fvextra}
+\fvset{breaklines=true}  % wrap long lines in code blocks
+
+% ── Emoji Fallbacks (for XeLaTeX) ───────────
+\usepackage{fontawesome5}
+\usepackage{newunicodechar}
+\newunicodechar{^^^^26a0}{\textcolor{orange}{\faExclamationTriangle}}
+\newunicodechar{^^^^2387}{\faGithub}
+\newunicodechar{^^^^fe0f}{} % Ignore variation selectors
+
+% ── Tables: smaller font to prevent column overflow ──────────
+\usepackage{etoolbox}
+\AtBeginEnvironment{longtable}{\scriptsize}
+\appto\endlongtable{\normalsize}
+
+\definecolor{yetipink}{HTML}{c7254e}   % Inline code text
+\definecolor{yeticodebg}{HTML}{f9f2f4} % Inline code background
+
+% ── Headings: sans-serif for title AND number ────────────────
+% `disposition` covers the title text of all heading levels
+\addtokomafont{disposition}{\normalfont\sffamily}
+% Wrap the counter macros to ensure numbers also print in sans-serif
+\let\origthechapter\thechapter
+\renewcommand{\thechapter}{\textsf{\origthechapter}}
+\let\origthesection\thesection
+\renewcommand{\thesection}{\textsf{\origthesection}}
+\let\origthesubsection\thesubsection
+\renewcommand{\thesubsection}{\textsf{\origthesubsection}}
+
+% ── Inline code: pink text + allow wrapping at spaces ───────
+\let\oldtexttt\texttt
+\DeclareRobustCommand{\texttt}[1]{%
+  \texorpdfstring{%
+    \textcolor{yetipink}{{\ttfamily\spaceskip=0.5em plus 0.2em minus 0.1em #1}}%
+  }{#1}%
+}
+
+

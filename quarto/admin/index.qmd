@@ -1,0 +1,24 @@
+---
+# DEVELOPER MODE - Auto-Update on Save
+execute:
+  daemon: 60 # Keeps the engine "warm" for 60 seconds to make updates instant
+editor:
+  render-on-save: true
+  preview:
+    port: 4242
+    browser: false
+######################################
+---
+
+# Overview
+
+Welcome to the Nostradamus Cube-in-a-Box Admin Manual. This guide is intended for system administrators responsible for setting up, configuring, and maintaining the Open Data Cube (ODC) environment.
+
+The Nostradamus Cube-in-a-Box is a streamlined platform for running the Open Data Cube. It leverages Docker and GNU Make to simplify the deployment of a full stack including:
+
+- **JupyterHub**: Multi-user server management that provides each user with a **JupyterLab** notebook environment.
+- **PostgreSQL/PostGIS**: Database for ODC metadata.
+- **Explorer**: Web UI for browsing datasets.
+- **Traefik**: Reverse proxy and edge router.
+
+The current repository is a fork of [https://github.com/opendatacube/cube-in-a-box](https://github.com/opendatacube/cube-in-a-box).

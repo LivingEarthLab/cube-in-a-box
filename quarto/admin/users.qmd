@@ -1,0 +1,107 @@
+# User Management
+
+JupyterHub uses NativeAuthenticator with a custom signup handler that restricts access to pre-authorized users only.
+
+But admin users can add new users through the JupyterHub admin panel.
+
+## How User Authorization Works
+
+1. **Authorized Users**: Only users listed in `JUPYTERHUB_ADMINS` or `JUPYTERHUB_USERS` in the `.env` file (or [manually added by an admin user](#manual-user-add)) can successfully sign up.
+2. **Unauthorized Users**: Unauthorized users will see an error message directing them to contact the administrator if they try to sign up.
+3. **Self-Service Signup**: Authorized users can create their own accounts via the signup page.
+4. **Admin Creation**: Administrators can also create user accounts through the JupyterHub admin panel.
+
+## Adding Authorized Users
+
+**Method 1: Via `.env` file (Recommended for initial setup)**
+
+   Edit the `.env` file:
+   
+   ```bash
+   # Admin users (have full control over JupyterHub)
+   JUPYTERHUB_ADMINS=admin,bob
+   
+   # Regular users (can only access their own notebooks)
+   JUPYTERHUB_USERS=guest,charlie
+   ```
+::: {.callout-warning}
+## Notes
+- You need to have at least one admin user (`JUPYTERHUB_ADMINS`)!
+- If you add a user this way while the system is running, you need to restart JupyterHub to apply changes:
+  ```bash
+  docker-compose restart jupyterhub
+  ```
+:::
+
+   Users can now visit `http://<DOMAIN>/jupyter/hub/signup` to create their accounts.
+
+[**Method 2: Via JupyterHub Admin Panel (Once the system is running, for ad-hoc user additions)**]{#manual-user-add}
+
+1. Log in as an admin user.
+2. `File` > `Hub Control Panel` > `Admin`, or navigate to `http://<DOMAIN>/jupyter/hub/admin`.  
+3. Click `Add Users`.
+4. Enter the username and click `Add`.
+5. The user is created immediately and can sign up at `http://<DOMAIN>/jupyter/hub/signup`.
+
+## User Signup Flow
+
+**For Authorized Users:**
+
+1. Visit `http://<DOMAIN>/jupyter/hub/signup`.  
+2. Fill in username (must match an authorized one) and password.
+3. Submit the form.
+4. See success message: "The signup was successful! You can now go to the home page and log in to the system."
+5. Log in at `http://<DOMAIN>/jupyter/hub/login`.
+
+**For Unauthorized Users:**
+
+1. Contact the administrator to be added.
+
+## Managing Existing Users
+
+**View all users:**
+
+1. Log in as admin.  
+2. Navigate to `http://<DOMAIN>/jupyter/hub/admin`.
+3. You'll see a list of all users with their status and last activity.
+
+**Edit user:**
+
+1. Click "Edit User" next to any user.  
+2. You can make them admin, delete them, or manage their servers.
+
+**Delete user:**
+
+1. Click "Edit User" → "Delete User".
+2. This removes the user account but doesn't delete their notebook files (stored in `jupyterhub-user-<username>` volume).
+3. Execute `make purge-user HUB_USER=<username> CONFIRM=1` to delete the user's volume.
+4. Remove user from `.env` file if required.
+
+**Password reset or recovery:**
+
+1. Using the JupyterHub Admin interface, delete the user and re-create them, **without deleting their user volume**.
+2. Inform the user they will have to sign up again.
+
+## User Data and Notebooks
+
+Each user's notebooks are stored in a Docker volume named `jupyterhub-user-<username>`. These volumes persist even if the user account is deleted.
+
+**Backup user notebooks:**
+```bash
+docker run --rm -v jupyterhub-user-<username>:/source -v $(pwd)/backups:/backup alpine tar czf /backup/user-<username>-notebooks.tar.gz -C /source .
+```
+
+**Restore user notebooks:**
+```bash
+docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-<username>-notebooks.tar.gz -C /target
+```
+
+**Remove all user volumes (⚠️⚠️ use with extra care):**
+```bash
+make purge-users CONFIRM=1  # ⚠️⚠️
+```
+
+**Remove a specific user volume (⚠️ use with care):**
+```bash
+make purge-user HUB_USER=alice CONFIRM=1  # ⚠️
+```

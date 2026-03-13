@@ -1,0 +1,7 @@
+# Yeti PDF Theme - safe settings (ignored by HTML renderer)
+pdf-engine: xelatex
+mainfont: "Open Sans"
+sansfont: "Open Sans"
+fontsize: 11pt
+colorlinks: true
+papersize: a4

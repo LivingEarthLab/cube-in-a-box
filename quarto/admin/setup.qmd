@@ -1,0 +1,63 @@
+# First-Time Setup
+
+::: {.callout-important}
+## Execution Context
+All admin operations in this chapter must be executed from the **project root directory** (where the `Makefile` and `docker-compose.yml` reside).
+:::
+
+This repository uses environment variables to configure the local domain, database credentials, and the Jupyter password.
+
+1. Create a `.env` file (Docker Compose reads `.env` by default):
+
+   ```bash
+   cp .env.default .env
+    ```
+
+2. Edit `.env` to match your setup:
+   - Set `DOMAIN` to your local domain (e.g. `localhost` or a IP)
+   - Set strong passwords for `POSTGRES_PASS`
+   - Configure `JUPYTERHUB_ADMINS` **(with at least one admin username)**
+   - Optionally add regular users to `JUPYTERHUB_USERS`
+
+   **Required variables:**
+
+   | Variable              | Required | Example                    | Description                                                   |
+   | --------------------- | -------: | -------------------------- | ------------------------------------------------------------- |
+   | `DOMAIN`              |      Yes | `localhost`                | Hostname used to access the web endpoints (Jupyter/Explorer). |
+   | `IMAGE_VERSION`       |      Yes | `20260211`                 | Version of the images to use.                                 |
+   | `POSTGRES_HOSTNAME`   |      Yes | `postgres`                 | Hostname used to access the PostgreSQL database.              |
+   | `POSTGRES_PORT`       |      Yes | `5432`                     | Port used to access the PostgreSQL database.                  |
+   | `POSTGRES_DBNAME`     |      Yes | `opendatacube`             | PostgreSQL database name used by Open Data Cube.              |
+   | `POSTGRES_USER`       |      Yes | `opendatacube`             | PostgreSQL user for the Open Data Cube database.              |
+   | `POSTGRES_PASS`       |      Yes | `a-strong-password`        | PostgreSQL password for the Open Data Cube database.          |
+   | `JUPYTERHUB_ADMINS`   |      Yes | `admin,bruno`              | Comma-separated list of JupyterHub admin usernames.           |
+   | `JUPYTERHUB_USERS`    |       No | `guest,alice,bob`          | Comma-separated list of authorized non-admin usernames.       |
+: Required environment variables {#tbl-env-vars}
+
+3. First-time setup
+- Using default parameters:
+
+  ```bash
+  make setup
+  ```
+
+- With a specific area/time (`BBOX`, `DATETIME`):
+ 
+  ```bash
+  # Switzerland 1 year
+  make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
+  
+  # Switzerland all years (till end 2025, might take a while)
+  make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31
+  ```
+
+   | Parameter | Format | Description |
+   | :--- | :--- | :--- |
+   | **`BBOX`** | `lon_min,lat_min,lon_max,lat_max` | Spatial extent in decimal degrees. Use a tool like [bboxfinder.com](http://bboxfinder.com) (copy the **Box** values). |
+   | **`DATETIME`** | `start/end` | Temporal extent. Use `YYYY-MM-DD` format (e.g., `2020-01-01/2020-12-31`). |
+: `make setup` parameters {#tbl-setup-params}
+
+::: {.callout-tip}
+## Note
+These parameters can also be used individually with `make index` to add more data later without running a full setup (see [Target reference](operations.qmd#target-reference) Table).
+:::

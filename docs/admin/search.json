@@ -1,0 +1,272 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Nostradamus Cube-in-a-Box - Admin Guide",
+    "section": "",
+    "text": "1 Overview\nWelcome to the Nostradamus Cube-in-a-Box Admin Manual. This guide is intended for system administrators responsible for setting up, configuring, and maintaining the Open Data Cube (ODC) environment.\nThe Nostradamus Cube-in-a-Box is a streamlined platform for running the Open Data Cube. It leverages Docker and GNU Make to simplify the deployment of a full stack including:\n\nJupyterHub: Multi-user server management that provides each user with a JupyterLab notebook environment.\nPostgreSQL/PostGIS: Database for ODC metadata.\nExplorer: Web UI for browsing datasets.\nTraefik: Reverse proxy and edge router.\n\nThe current repository is a fork of https://github.com/opendatacube/cube-in-a-box.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
+    ]
+  },
+  {
+    "objectID": "prerequisites.html",
+    "href": "prerequisites.html",
+    "title": "2  Prerequisites",
+    "section": "",
+    "text": "2.1 Linux\nThis project is run via docker compose and a Makefile. Ensure your system meets the following requirements before starting:",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Prerequisites</span>"
+    ]
+  },
+  {
+    "objectID": "prerequisites.html#linux",
+    "href": "prerequisites.html#linux",
+    "title": "2  Prerequisites",
+    "section": "",
+    "text": "Docker Engine: Official Instructions.\nDocker Compose: Usually included with Docker Engine.\nGNU Make: Install via your package manager (e.g. sudo apt update && sudo apt install make).",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Prerequisites</span>"
+    ]
+  },
+  {
+    "objectID": "prerequisites.html#macos",
+    "href": "prerequisites.html#macos",
+    "title": "2  Prerequisites",
+    "section": "2.2 macOS",
+    "text": "2.2 macOS\n\nDocker Desktop: Official Instructions.\nMake: Available via Xcode Command Line Tools (xcode-select --install).",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Prerequisites</span>"
+    ]
+  },
+  {
+    "objectID": "prerequisites.html#windows-wsl2-recommended",
+    "href": "prerequisites.html#windows-wsl2-recommended",
+    "title": "2  Prerequisites",
+    "section": "2.3 Windows (WSL2 Recommended)",
+    "text": "2.3 Windows (WSL2 Recommended)\n\nWSL2: Install WSL2 and a Linux distribution (e.g., Ubuntu).\nDocker Desktop: Install Docker Desktop for Windows. In settings, enable Use WSL2 based engine and WSL Integration for your Linux distribution.\nMake: Open your WSL terminal and install Make (sudo apt update && sudo apt install -y make).\n\n\n\n\n\n\nTipNotes\n\n\n\n\nRun all make ... commands from the WSL terminal (not PowerShell) to ensure a consistent Linux-like environment.\nInstead of keeping this project in your regular Windows folders (like your C: drive, which appears as /mnt/c/... in Linux), save it directly inside your Linux environment (for example, in a ~/projects/ folder). This will make the system run much faster.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Prerequisites</span>"
+    ]
+  },
+  {
+    "objectID": "prerequisites.html#quick-verification",
+    "href": "prerequisites.html#quick-verification",
+    "title": "2  Prerequisites",
+    "section": "2.4 Quick verification",
+    "text": "2.4 Quick verification\nOnce installed, you should be able to run:\nmake --version\ndocker --version\ndocker compose version",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Prerequisites</span>"
+    ]
+  },
+  {
+    "objectID": "repository-structure.html",
+    "href": "repository-structure.html",
+    "title": "3  Repository Structure",
+    "section": "",
+    "text": "Core Files:\n\nMakefile: Main entry point for commands (setup, indexing, maintenance).\ndocker-compose.yml / docker-compose.dev.yml: Service definitions for prod and dev environments.\n.env.default / .env: Environment variables for system configuration.\nDockerfile / docker-bake.hcl: Definitions for building the Docker images.\nindex-parallel.sh: Script automating the parallel indexing of data.\nrequirements.txt: Python package dependencies for the Jupyter environment.\ndistributed.yaml: Configuration for distributed Dask processing.\n\nKey Directories:\n\ndata/: Database storage, local files, and user workspaces.\ndatacube-explorer/: Web UI configuration and customization.\nhub/: JupyterHub setup, authentication, and Docker spawner logic.\nproducts/: Open Data Cube product definitions.\nquarto/: Documentation source (including this manual).\nscripts/: Data processing and system maintenance utilities.\nshared/: Read-only templates and shared data for all JupyterHub users.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Repository Structure</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html",
+    "href": "setup.html",
+    "title": "4  First-Time Setup",
+    "section": "",
+    "text": "ImportantExecution Context\n\n\n\nAll admin operations in this chapter must be executed from the project root directory (where the Makefile and docker-compose.yml reside).\n\n\nThis repository uses environment variables to configure the local domain, database credentials, and the Jupyter password.\n\nCreate a .env file (Docker Compose reads .env by default):\ncp .env.default .env\nEdit .env to match your setup:\n\nSet DOMAIN to your local domain (e.g. localhost or a IP)\nSet strong passwords for POSTGRES_PASS\nConfigure JUPYTERHUB_ADMINS (with at least one admin username)\nOptionally add regular users to JUPYTERHUB_USERS\n\nRequired variables:\n\n\n\nTable 4.1: Required environment variables\n\n\n\n\n\n\n\n\n\n\n\nVariable\nRequired\nExample\nDescription\n\n\n\n\nDOMAIN\nYes\nlocalhost\nHostname used to access the web endpoints (Jupyter/Explorer).\n\n\nIMAGE_VERSION\nYes\n20260211\nVersion of the images to use.\n\n\nPOSTGRES_HOSTNAME\nYes\npostgres\nHostname used to access the PostgreSQL database.\n\n\nPOSTGRES_PORT\nYes\n5432\nPort used to access the PostgreSQL database.\n\n\nPOSTGRES_DBNAME\nYes\nopendatacube\nPostgreSQL database name used by Open Data Cube.\n\n\nPOSTGRES_USER\nYes\nopendatacube\nPostgreSQL user for the Open Data Cube database.\n\n\nPOSTGRES_PASS\nYes\na-strong-password\nPostgreSQL password for the Open Data Cube database.\n\n\nJUPYTERHUB_ADMINS\nYes\nadmin,bruno\nComma-separated list of JupyterHub admin usernames.\n\n\nJUPYTERHUB_USERS\nNo\nguest,alice,bob\nComma-separated list of authorized non-admin usernames.\n\n\n\n\n\n\nFirst-time setup\n\n\nUsing default parameters:\nmake setup\nWith a specific area/time (BBOX, DATETIME):\n# Switzerland 1 year\nmake setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31\n\n# Switzerland all years (till end 2025, might take a while)\nmake setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31\n\n\n\nTable 4.2: make setup parameters\n\n\n\n\n\nParameter\nFormat\nDescription\n\n\n\n\nBBOX\nlon_min,lat_min,lon_max,lat_max\nSpatial extent in decimal degrees. Use a tool like bboxfinder.com (copy the Box values).\n\n\nDATETIME\nstart/end\nTemporal extent. Use YYYY-MM-DD format (e.g., 2020-01-01/2020-12-31).\n\n\n\n\n\n\n\n\n\n\n\n\n\nTipNote\n\n\n\nThese parameters can also be used individually with make index to add more data later without running a full setup (see Target reference Table).",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>First-Time Setup</span>"
+    ]
+  },
+  {
+    "objectID": "users.html",
+    "href": "users.html",
+    "title": "5  User Management",
+    "section": "",
+    "text": "5.1 How User Authorization Works\nJupyterHub uses NativeAuthenticator with a custom signup handler that restricts access to pre-authorized users only.\nBut admin users can add new users through the JupyterHub admin panel.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>User Management</span>"
+    ]
+  },
+  {
+    "objectID": "users.html#how-user-authorization-works",
+    "href": "users.html#how-user-authorization-works",
+    "title": "5  User Management",
+    "section": "",
+    "text": "Authorized Users: Only users listed in JUPYTERHUB_ADMINS or JUPYTERHUB_USERS in the .env file (or manually added by an admin user) can successfully sign up.\nUnauthorized Users: Unauthorized users will see an error message directing them to contact the administrator if they try to sign up.\nSelf-Service Signup: Authorized users can create their own accounts via the signup page.\nAdmin Creation: Administrators can also create user accounts through the JupyterHub admin panel.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>User Management</span>"
+    ]
+  },
+  {
+    "objectID": "users.html#adding-authorized-users",
+    "href": "users.html#adding-authorized-users",
+    "title": "5  User Management",
+    "section": "5.2 Adding Authorized Users",
+    "text": "5.2 Adding Authorized Users\nMethod 1: Via .env file (Recommended for initial setup)\nEdit the .env file:\n# Admin users (have full control over JupyterHub)\nJUPYTERHUB_ADMINS=admin,bob\n\n# Regular users (can only access their own notebooks)\nJUPYTERHUB_USERS=guest,charlie\n\n\n\n\n\n\nWarningNotes\n\n\n\n\nYou need to have at least one admin user (JUPYTERHUB_ADMINS)!\nIf you add a user this way while the system is running, you need to restart JupyterHub to apply changes:\ndocker-compose restart jupyterhub\n\n\n\nUsers can now visit http://&lt;DOMAIN&gt;/jupyter/hub/signup to create their accounts.\nMethod 2: Via JupyterHub Admin Panel (Once the system is running, for ad-hoc user additions)\n\nLog in as an admin user.\nFile &gt; Hub Control Panel &gt; Admin, or navigate to http://&lt;DOMAIN&gt;/jupyter/hub/admin.\n\nClick Add Users.\nEnter the username and click Add.\nThe user is created immediately and can sign up at http://&lt;DOMAIN&gt;/jupyter/hub/signup.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>User Management</span>"
+    ]
+  },
+  {
+    "objectID": "users.html#user-signup-flow",
+    "href": "users.html#user-signup-flow",
+    "title": "5  User Management",
+    "section": "5.3 User Signup Flow",
+    "text": "5.3 User Signup Flow\nFor Authorized Users:\n\nVisit http://&lt;DOMAIN&gt;/jupyter/hub/signup.\n\nFill in username (must match an authorized one) and password.\nSubmit the form.\nSee success message: “The signup was successful! You can now go to the home page and log in to the system.”\nLog in at http://&lt;DOMAIN&gt;/jupyter/hub/login.\n\nFor Unauthorized Users:\n\nContact the administrator to be added.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>User Management</span>"
+    ]
+  },
+  {
+    "objectID": "users.html#managing-existing-users",
+    "href": "users.html#managing-existing-users",
+    "title": "5  User Management",
+    "section": "5.4 Managing Existing Users",
+    "text": "5.4 Managing Existing Users\nView all users:\n\nLog in as admin.\n\nNavigate to http://&lt;DOMAIN&gt;/jupyter/hub/admin.\nYou’ll see a list of all users with their status and last activity.\n\nEdit user:\n\nClick “Edit User” next to any user.\n\nYou can make them admin, delete them, or manage their servers.\n\nDelete user:\n\nClick “Edit User” → “Delete User”.\nThis removes the user account but doesn’t delete their notebook files (stored in jupyterhub-user-&lt;username&gt; volume).\nExecute make purge-user HUB_USER=&lt;username&gt; CONFIRM=1 to delete the user’s volume.\nRemove user from .env file if required.\n\nPassword reset or recovery:\n\nUsing the JupyterHub Admin interface, delete the user and re-create them, without deleting their user volume.\nInform the user they will have to sign up again.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>User Management</span>"
+    ]
+  },
+  {
+    "objectID": "users.html#user-data-and-notebooks",
+    "href": "users.html#user-data-and-notebooks",
+    "title": "5  User Management",
+    "section": "5.5 User Data and Notebooks",
+    "text": "5.5 User Data and Notebooks\nEach user’s notebooks are stored in a Docker volume named jupyterhub-user-&lt;username&gt;. These volumes persist even if the user account is deleted.\nBackup user notebooks:\ndocker run --rm -v jupyterhub-user-&lt;username&gt;:/source -v $(pwd)/backups:/backup alpine tar czf /backup/user-&lt;username&gt;-notebooks.tar.gz -C /source .\nRestore user notebooks:\ndocker run --rm -v jupyterhub-user-&lt;username&gt;:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-&lt;username&gt;-notebooks.tar.gz -C /target\nRemove all user volumes (⚠️⚠️ use with extra care):\nmake purge-users CONFIRM=1  # ⚠️⚠️\nRemove a specific user volume (⚠️ use with care):\nmake purge-user HUB_USER=alice CONFIRM=1  # ⚠️",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>User Management</span>"
+    ]
+  },
+  {
+    "objectID": "operations.html",
+    "href": "operations.html",
+    "title": "6  CiaB Management with make",
+    "section": "",
+    "text": "6.1 Target reference (from make help)\nThe system uses GNU Make as a task automation tool to wrap complex Docker and data indexing workflows into simple commands. Instead of manually executing long command-line sequences, you use make targets to trigger predefined administrative tasks.\nTo see the full list of available targets on your machine, run:",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>CiaB Management with `make`</span>"
+    ]
+  },
+  {
+    "objectID": "operations.html#target-reference",
+    "href": "operations.html#target-reference",
+    "title": "6  CiaB Management with make",
+    "section": "",
+    "text": "Table 6.1: make target reference\n\n\n\n\n\n\n\n\n\nCommand\nDescription\n\n\n\n\nRuntime Control\n\n\n\nmake up\nStart the environment in the background (then open Jupyter in your browser)\n\n\nmake down\nStop the running services (keeps your data and images)\n\n\nmake status\nShow what is running (containers and their status)\n\n\nmake logs\nShow live logs from all services (useful for troubleshooting)\n\n\nmake shell\nOpen a terminal inside the Jupyter container (requires HUB_USER)\n\n\nmake wait-for-db\nWait for PostgreSQL to be ready to accept connections\n\n\nSetup & Init\n\n\n\nmake setup\nFirst-time setup (mode-dependent: uses pull in prod, build in dev)\n\n\nmake init\nInitialize the Open Data Cube database (run once after setup)\n\n\nmake build\nBuild the images locally\n\n\nmake build-nocache\nBuild the images locally from scratch\n\n\nmake pull\nDownload all service images (recommended before first run in prod mode)\n\n\nData & Indexing\n\n\n\nmake product\nLoad product definitions into the database (describes available datasets)\n\n\nmake index\nIndex example data for the selected area/time (uses BBOX and DATETIME)\n\n\nmake index-parallel\nIndex data using the automated script (recommended; faster)\n\n\nmake index-serie\nIndex data step-by-step (older method; slower)\n\n\nmake update-explorer\nRebuild the Explorer index so datasets appear in the web UI\n\n\nMaintenance\n\n\n\nmake backup\nCreate a backup of the PostgreSQL database\n\n\nmake restore\nRestore PostgreSQL database from a backup file (requires BACKUP_FILE and CONFIRM=1)\n\n\nmake clean\nStop everything and remove containers, volumes, and built images\n\n\nmake purge-data\nDelete local data in ./data (pg, local_data, shared). Irreversible; requires CONFIRM=1\n\n\nmake purge-user\nRemove a specific user container and volume. Irreversible; requires HUB_USER and CONFIRM=1\n\n\nmake purge-users\nRemove all spawned JupyterHub user containers and volumes. Irreversible; requires CONFIRM=1\n\n\nAdvanced\n\n\n\nmake release-push\nBuild and push multi-architecture production images to the configured container registry\n\n\nmake help\nShow available commands",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>CiaB Management with `make`</span>"
+    ]
+  },
+  {
+    "objectID": "operations.html#common-usage-patterns",
+    "href": "operations.html#common-usage-patterns",
+    "title": "6  CiaB Management with make",
+    "section": "6.2 Common usage patterns",
+    "text": "6.2 Common usage patterns\n\nFirst-time setup (default parameters):\nmake setup\nSetup with a specific area/time (BBOX and DATETIME):\n# Switzerland 1 year\nmake setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31\n\n# Switzerland all years (till end 2025, might take a while)\nmake setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31\nStart/stop and troubleshoot:\nmake up\nmake status\nmake logs\nmake down\nReset options (⚠️ use with care):\n# Stop everything and remove containers/volumes/images\nmake clean\n\n# ⚠️ Irreversible: delete local data in ./data (requires confirmation)\nmake purge-data CONFIRM=1\n\n# ⚠️⚠️ TOTAL WIPE OUT (USE WITH EXTRA CARE !!!)\nmake clean && make purge-data CONFIRM=1 && make purge-users CONFIRM=1\n# then check for any remaining resources\ndocker ps -a && docker images -a && docker volume ls && ls -la ./data",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>CiaB Management with `make`</span>"
+    ]
+  },
+  {
+    "objectID": "execution-modes.html",
+    "href": "execution-modes.html",
+    "title": "7  Execution Modes",
+    "section": "",
+    "text": "7.1 Production Mode (prod)\nNostradamus Cube-in-a-Box supports two execution modes: Production (prod) and Development (dev). The MODE environment variable determines which Docker Compose configuration is used.\nThis is the default mode. It pulls official images from the registry and is optimized for stability.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Execution Modes</span>"
+    ]
+  },
+  {
+    "objectID": "execution-modes.html#production-mode-prod",
+    "href": "execution-modes.html#production-mode-prod",
+    "title": "7  Execution Modes",
+    "section": "",
+    "text": "# Explicitly set (optional)\nexport MODE=prod\nmake up",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Execution Modes</span>"
+    ]
+  },
+  {
+    "objectID": "execution-modes.html#development-mode-dev",
+    "href": "execution-modes.html#development-mode-dev",
+    "title": "7  Execution Modes",
+    "section": "7.2 Development Mode (dev)",
+    "text": "7.2 Development Mode (dev)\nUse this mode to modify Dockerfiles or core configurations. In this mode, make setup builds images locally instead of pulling them.\nMethod 1: Session-wide (Recommended)\nThis ensures all subsequent make commands (up, status, logs, etc.) use the correct mode.\nexport MODE=dev\nmake setup\nmake up\nMethod 2: One-off Command\nYou can pass the variable directly, but you must remember to include it in every command.\nmake up MODE=dev\nmake status MODE=dev\nSwitching Back\nTo return to production mode:\nunset MODE\n# or\nexport MODE=prod",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Execution Modes</span>"
+    ]
+  },
+  {
+    "objectID": "execution-modes.html#verification",
+    "href": "execution-modes.html#verification",
+    "title": "7  Execution Modes",
+    "section": "7.3 Verification",
+    "text": "7.3 Verification\nRun make help to verify the active mode:\nCurrent mode: dev\n...",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Execution Modes</span>"
+    ]
+  },
+  {
+    "objectID": "shared-directory.html",
+    "href": "shared-directory.html",
+    "title": "8  Shared Directory",
+    "section": "",
+    "text": "This directory is shared among users of the JupyterHub instance.\nThe primary purpose of this directory is to facilitate file sharing and collaboration between users.\nThe ./shared/ directory contains:\n\nStatic Content: Directories and files directly under the root are read-only for everyone in the Jupyter interface.\nUser Directories: Directories and files under ./shared/all_users/ are visible to all users in the Jupyter interface as read-only, with only their own directory as read-write. This allows users to copy notebooks from others but not modify their work directly.\n\n\n\n\n\n\n\nTipNote\n\n\n\nCiaB Admin can add/remove/modify ./shared/ directory content at any time on the host machine. The changes will be visible to all users in the Jupyter interface immediately.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>Shared Directory</span>"
+    ]
+  },
+  {
+    "objectID": "maintenance.html",
+    "href": "maintenance.html",
+    "title": "9  Backup and Restore",
+    "section": "",
+    "text": "9.1 Database backup procedure\nThe ./data/ subdirectories contain persistent data and should be backed up regularly:\nUser notebooks are stored in Docker volumes named jupyterhub-user-&lt;username&gt;\nThis chapter describes how to backup and restore the CiaB Database and user volumes to and from the ./backups/ directory.\nDatabase backup:\nTo create a backup of your PostgreSQL database:\nThis will create a timestamped SQL dump file in the ./backups directory.\nExample: ./backups/opendatacube_20260121_141530.sql.\nRestore Database:\nTo restore a database from a backup file:",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Backup and Restore</span>"
+    ]
+  },
+  {
+    "objectID": "maintenance.html#database-backup-procedure",
+    "href": "maintenance.html#database-backup-procedure",
+    "title": "9  Backup and Restore",
+    "section": "",
+    "text": "make backup\n\n\n\nmake restore BACKUP_FILE=./backups/opendatacube_20260121_141530.sql CONFIRM=1\n\n\n\n\n\n\nWarningNotes\n\n\n\nRestoring will overwrite your current database. Make sure you have a recent backup before proceeding.",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Backup and Restore</span>"
+    ]
+  },
+  {
+    "objectID": "maintenance.html#volume-backup-procedure",
+    "href": "maintenance.html#volume-backup-procedure",
+    "title": "9  Backup and Restore",
+    "section": "9.2 Volume backup procedure",
+    "text": "9.2 Volume backup procedure\nManual volume backup:\n# Backup user notebooks\ndocker run --rm -v jupyterhub-user-&lt;username&gt;:/source -v $(pwd)/backups:/backup alpine tar czf /backup/user-&lt;username&gt;-notebooks.tar.gz -C /source .\n\n# Backup all data directories\ntar czf backups/data-backup-$(date +%Y%m%d).tar.gz ./data/\nRestore user notebooks:\n# Restore user notebooks\ndocker run --rm -v jupyterhub-user-&lt;username&gt;:/target -v $(pwd)/backups:/backup alpine tar xzf /backup/user-&lt;username&gt;-notebooks.tar.gz -C /target",
+    "crumbs": [
+      "<span class='chapter-number'>9</span>  <span class='chapter-title'>Backup and Restore</span>"
+    ]
+  },
+  {
+    "objectID": "security-best-practices.html",
+    "href": "security-best-practices.html",
+    "title": "10  Security Best Practices",
+    "section": "",
+    "text": "Use strong passwords for admin accounts\nRegularly review the user list in the admin panel\nRemove unused accounts to minimize security risks\nBackup user data regularly (see Backup and Restore section)\nKeep admin users minimal - only trusted users should have admin access",
+    "crumbs": [
+      "<span class='chapter-number'>10</span>  <span class='chapter-title'>Security Best Practices</span>"
+    ]
+  },
+  {
+    "objectID": "license.html",
+    "href": "license.html",
+    "title": "11  License",
+    "section": "",
+    "text": "This project is a fork of https://github.com/opendatacube/cube-in-a-box, and consequently inherits its MIT License.\n\n\n\nLicense: MIT\n\n\nCopyright © 2026 UNIGE/GRID-Geneva\nYou are free to use, modify, and distribute this software under the terms of the MIT License. For more details, see the full license text: MIT.",
+    "crumbs": [
+      "<span class='chapter-number'>11</span>  <span class='chapter-title'>License</span>"
+    ]
+  }
+]

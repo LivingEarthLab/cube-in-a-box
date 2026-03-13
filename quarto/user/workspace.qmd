@@ -1,0 +1,51 @@
+# Your Jupyter Workspace
+
+Once logged in, you are presented with the [**JupyterLab**](https://jupyterlab.readthedocs.io/en/stable/getting_started/overview.html) interface. A powerful, web-based environment for interactive computing and geospatial analysis.
+
+::: {.callout-tip}
+## Note
+Non-admin users are allowed to perform `git` or `conda` operations. However, they are not allowed to perform any operation that modifies the system-wide environment (such as `sudo apt install`).  
+In case of real need `admin`right can be exceptionally granted, under request to the system administrator).
+:::
+
+## Interface Basics
+- **File Browser** (Left Sidebar): Manage your files and directories.
+- **Main Work Area**: Where your notebooks, terminals, and text files appear.
+- **Top Menu**: Access file operations, kernel management, and settings.
+
+## Data Persistence
+All files stored in your JupyterLab root directory (`/notebooks/`, or `./` from the perspective of the JupyterLab interface) are **persistent**. This means your work, custom scripts, and installed packages will remain available across sessions.
+
+## Data Backup & Restore
+While the system volumes are robust, it is a best practice with remote storage to periodically back up your important notebooks and results.
+
+**Option 1: Manual Backup (Download)**
+
+1.  Right-click on a file or directory in the sidebar.
+2.  Select **Download** or **Download Current Folder as an Archive** (respectively).
+3.  Save the file to your local machine.
+
+**Option 2: Terminal Backup (Advanced)**
+You can create a compressed archive of your workspace using the terminal:
+```bash
+tar -czvf my_backup_2026.tar.gz /any_directory/
+```
+Then download the resulting `.tar.gz` file.
+
+::: {.callout-tip icon=false}
+## ⎇ Git
+Users familiar with [`git`](https://github.com/git-guides) can use it to back up their work to a remote repository.
+:::
+
+## Managing Your Server
+If your environment feels sluggish:
+
+1.  Go to **File** -> **Hub Control Panel**.
+2.  Click **Stop My Server**.
+3.  This frees up system memory and CPU for other users while keeping your data safe.
+
+::: {.callout-important}
+## Note
+When you have finished your work for the day: **File** -> **Log Out**. To preserve resources for other users.
+:::
+

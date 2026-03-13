@@ -1,0 +1,11 @@
+# License
+
+This project is a fork of [https://github.com/opendatacube/cube-in-a-box](https://github.com/opendatacube/cube-in-a-box), and consequently inherits its **MIT License**.
+
+
+[![License: MIT](license-MIT.png)](LICENSE.txt)
+
+**Copyright © 2026 UNIGE/GRID-Geneva**
+
+You are free to use, modify, and distribute this software under the terms of the MIT License.
+For more details, see the full license text: [MIT](https://opensource.org/license/mit).

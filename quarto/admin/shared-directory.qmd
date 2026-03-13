@@ -1,0 +1,15 @@
+# Shared Directory
+
+This directory is shared among users of the JupyterHub instance.
+
+The primary purpose of this directory is to facilitate file sharing and collaboration between users. 
+
+The `./shared/` directory contains:
+
+- **Static Content**: Directories and files directly under the root are read-only for everyone in the Jupyter interface. 
+- **User Directories**: Directories and files under `./shared/all_users/` are visible to all users in the Jupyter interface as read-only, with only their own directory as read-write. This allows users to copy notebooks from others but not modify their work directly.
+
+::: {.callout-tip}
+## Note
+CiaB Admin can add/remove/modify `./shared/` directory content at any time on the host machine. The changes will be visible to all users in the Jupyter interface immediately.
+:::

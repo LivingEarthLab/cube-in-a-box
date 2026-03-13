@@ -1,0 +1,43 @@
+/* Ensure tables are scrollable if they overflow their container */
+div.sourceCode,
+div.table-responsive {
+    overflow-x: auto;
+    display: block;
+    max-width: 100%;
+}
+
+/* Fix for navbar disappearing on scroll (Headroom.js override) */
+#quarto-header .navbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+}
+
+/* Enable smooth scrolling and ensure header remains pinned */
+html {
+    scroll-padding-top: 70px;
+    /* Adjust based on navbar height */
+}
+
+/* Handle tables within column-page to avoid overlap with TOC where possible */
+.column-page {
+    /* Prevent the column-page from completely overlaying fixed elements if any */
+    z-index: 1;
+}
+
+table {
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    margin-bottom: 1rem;
+}
+
+/* Force pages without a TOC (which Quarto tags with .column-page-right) 
+   to use the standard body grid column, keeping text and footer alignment 
+   identical to pages with a TOC. */
+@media (min-width: 992px) {
+    .column-page-right {
+        grid-column: body !important;
+    }
+}

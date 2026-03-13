@@ -1,0 +1,242 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "section": "",
+    "text": "1 Overview\nWelcome to the Nostradamus Cube-in-a-Box User Guide. This manual is designed to help you navigate and use the Open Data Cube (ODC) platform for geospatial analysis and remote sensing.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#what-is-nostradamus-cube-in-a-box-ciab",
+    "href": "index.html#what-is-nostradamus-cube-in-a-box-ciab",
+    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "section": "1.1 What is Nostradamus Cube-in-a-box (CiaB)?",
+    "text": "1.1 What is Nostradamus Cube-in-a-box (CiaB)?\nThe Nostradamus CiaB is a specialized instance of the Open Data Cube, packaged for rapid deployment and accessibility. It provides a pre-configured environment with all the necessary tools to:\n\nBrowse massive collections of satellite imagery.\nRun Python-based geospatial analysis using Jupyter Notebooks.\nShare results and collaborate with other researchers.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#core-platforms",
+    "href": "index.html#core-platforms",
+    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "section": "1.2 Core Platforms",
+    "text": "1.2 Core Platforms\nTo interact with the system, you will primarily use two web interfaces:\n\nJupyter: http://&lt;DOMAIN&gt;/jupyter/\n\nYour primary analytical workspace.\nWrite and execute Python notebooks.\nAccess a persistent Linux home directory.\n\nExplorer: http://&lt;DOMAIN&gt;/explorer\n\nA visual web interface to browse available datasets.\nFilter products by area and time.\nView spatial and temporal coverage of indexed data.\nDownload data.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
+    ]
+  },
+  {
+    "objectID": "index.html#how-to-use-this-guide",
+    "href": "index.html#how-to-use-this-guide",
+    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "section": "1.3 How to use this guide",
+    "text": "1.3 How to use this guide\nIf you are a new user, start with the Account Setup section to gain access. Once authorized, explore the Workspace and Explorer sections to understand how to interact with the data.\nFor ready-to-use analysis templates, refer to the Data Products chapter which links directly to demonstration notebooks.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html",
+    "href": "setup.html",
+    "title": "2  Account Setup",
+    "section": "",
+    "text": "2.1 Self-Service Signup\nAccess to the Nostradamus CiaB is restricted to authorized users. Follow these steps to create your account and gain access.\nOnce you have been notified that your username is authorized:\nIf successful, you will see a message: “The signup was successful! You can now go to the home page and log in to the system.”",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Account Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#self-service-signup",
+    "href": "setup.html#self-service-signup",
+    "title": "2  Account Setup",
+    "section": "",
+    "text": "Visit the Signup Page: http://&lt;DOMAIN&gt;/jupyter/hub/signup.\nEnter your Username (must match exactly the one authorized).\nChoose a secure Password (you will have to enter it twice).\nSubmit the form.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Account Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#login",
+    "href": "setup.html#login",
+    "title": "2  Account Setup",
+    "section": "2.2 Login",
+    "text": "2.2 Login\n\nNavigate to the Login Page: http://&lt;DOMAIN&gt;/jupyter/hub/login.\nLog in with your credentials.\nYour Jupyter server will begin to spawn. This may take a few seconds on the first run.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Account Setup</span>"
+    ]
+  },
+  {
+    "objectID": "workspace.html",
+    "href": "workspace.html",
+    "title": "3  Your Jupyter Workspace",
+    "section": "",
+    "text": "3.1 Interface Basics\nOnce logged in, you are presented with the JupyterLab interface. A powerful, web-based environment for interactive computing and geospatial analysis.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your Jupyter Workspace</span>"
+    ]
+  },
+  {
+    "objectID": "workspace.html#interface-basics",
+    "href": "workspace.html#interface-basics",
+    "title": "3  Your Jupyter Workspace",
+    "section": "",
+    "text": "File Browser (Left Sidebar): Manage your files and directories.\nMain Work Area: Where your notebooks, terminals, and text files appear.\nTop Menu: Access file operations, kernel management, and settings.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your Jupyter Workspace</span>"
+    ]
+  },
+  {
+    "objectID": "workspace.html#data-persistence",
+    "href": "workspace.html#data-persistence",
+    "title": "3  Your Jupyter Workspace",
+    "section": "3.2 Data Persistence",
+    "text": "3.2 Data Persistence\nAll files stored in your JupyterLab root directory (/notebooks/, or ./ from the perspective of the JupyterLab interface) are persistent. This means your work, custom scripts, and installed packages will remain available across sessions.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your Jupyter Workspace</span>"
+    ]
+  },
+  {
+    "objectID": "workspace.html#data-backup-restore",
+    "href": "workspace.html#data-backup-restore",
+    "title": "3  Your Jupyter Workspace",
+    "section": "3.3 Data Backup & Restore",
+    "text": "3.3 Data Backup & Restore\nWhile the system volumes are robust, it is a best practice with remote storage to periodically back up your important notebooks and results.\nOption 1: Manual Backup (Download)\n\nRight-click on a file or directory in the sidebar.\nSelect Download or Download Current Folder as an Archive (respectively).\nSave the file to your local machine.\n\nOption 2: Terminal Backup (Advanced) You can create a compressed archive of your workspace using the terminal:\ntar -czvf my_backup_2026.tar.gz /any_directory/\nThen download the resulting .tar.gz file.\n\n\n\n\n\n\nTip Git\n\n\n\nUsers familiar with git can use it to back up their work to a remote repository.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your Jupyter Workspace</span>"
+    ]
+  },
+  {
+    "objectID": "workspace.html#managing-your-server",
+    "href": "workspace.html#managing-your-server",
+    "title": "3  Your Jupyter Workspace",
+    "section": "3.4 Managing Your Server",
+    "text": "3.4 Managing Your Server\nIf your environment feels sluggish:\n\nGo to File -&gt; Hub Control Panel.\nClick Stop My Server.\nThis frees up system memory and CPU for other users while keeping your data safe.\n\n\n\n\n\n\n\nImportantNote\n\n\n\nWhen you have finished your work for the day: File -&gt; Log Out. To preserve resources for other users.",
+    "crumbs": [
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Your Jupyter Workspace</span>"
+    ]
+  },
+  {
+    "objectID": "explorer.html",
+    "href": "explorer.html",
+    "title": "4  Exploring Data",
+    "section": "",
+    "text": "4.1 Key Features\nThe CiaB Explorer is a visual web interface (http://&lt;DOMAIN&gt;/explorer) that allows to discover what data is currently indexed and available without writing a single line of code.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Exploring Data</span>"
+    ]
+  },
+  {
+    "objectID": "explorer.html#key-features",
+    "href": "explorer.html#key-features",
+    "title": "4  Exploring Data",
+    "section": "",
+    "text": "Product Metadata: View detailed descriptions of each dataset (e.g., Sentinel-2, Landsat).\nSpatial Extent: See a map overview of the geographic areas covered by the data.\nTemporal Coverage: Check the available time ranges for each product.\nIndividual Scenes: Click through to see individual granules and their specific capture times.\nDownload Data: Download data.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Exploring Data</span>"
+    ]
+  },
+  {
+    "objectID": "explorer.html#how-to-browse-and-optionally-download-data",
+    "href": "explorer.html#how-to-browse-and-optionally-download-data",
+    "title": "4  Exploring Data",
+    "section": "4.2 How to browse and optionally download data",
+    "text": "4.2 How to browse and optionally download data\n\nSelect a Product: Use the dropdown menu or the sidebar to choose a dataset (e.g., s2_l2a for Sentinel-2).\nFilter by Time: Use the timeline or calendar overview to find specific dates.\nInspect Metadata: Check the DATASETS option, and click on any geographic box to see the scene metadata.\nDownload Data: Click on the urls of the files (single-band GeoTIFFs) to download in the Location section.\n\n\n\n\n\n\n\nTipTip\n\n\n\nUse the Explorer to verify if the data you need is available before starting a heavy ODC loading process in your notebook.",
+    "crumbs": [
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Exploring Data</span>"
+    ]
+  },
+  {
+    "objectID": "products.html",
+    "href": "products.html",
+    "title": "5  Data Products",
+    "section": "",
+    "text": "5.1 Available Datasets\nThe Nostradamus Cube comes pre-loaded with several high-value geospatial datasets. To help you get started quickly, we provide a collection of Demonstration Notebooks located in ./shared/notebooks_demo/.\nCommon products indexed in the system include:",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Data Products</span>"
+    ]
+  },
+  {
+    "objectID": "products.html#available-datasets",
+    "href": "products.html#available-datasets",
+    "title": "5  Data Products",
+    "section": "",
+    "text": "Sentinel-2: Level 2A (Surface Reflectance).\nSentinel-1: RTC (Radar Backscatter).\nLandsat: Collection 2 Level-2.\nLand Cover: ESRI and ESA Worldcover products.\nElevation: NASADEM.\n\n\n\n\n\n\n\nTipNote\n\n\n\nYou will find more information in ./shared/notebooks_demo/README.md.",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Data Products</span>"
+    ]
+  },
+  {
+    "objectID": "products.html#learning-by-example",
+    "href": "products.html#learning-by-example",
+    "title": "5  Data Products",
+    "section": "5.2 Learning by Example",
+    "text": "5.2 Learning by Example\nThe best way to learn how to load and process these products is to explore the ./shared/notebooks_demo directory in your Jupyter workspace.\n\n5.2.1 Core Demo Notebooks:\n\nSentinel_2.ipynb: Instructions for loading and visualizing Sentinel-2 data.\nSentinel_1_rtc.ipynb: Working with Radar data.\nLandsat_Collection_2_Level-2_Science_Products.ipynb: Comprehensive guide for Landsat.\nESRI_Land_Cover.ipynb & ESA_Worldcover.ipynb: Using classification maps.\nNASADEM.ipynb: Working with digital elevation models.\n\n\n\n5.2.2 How to use these Notebooks:\n\nNavigate to ./shared/notebooks_demo/ in your Jupyter file browser.\nCopy the notebook you are interested in (Right-click -&gt; Copy).\nPaste it into jupyter root directory.\nOpen your copy and start experimenting!\n\n\n\n\n\n\n\nTipNotes\n\n\n\n\nYou can edit and execute .ipynb files directly in the ./shared/notebooks_demo directory, but not save any changes.\nTo save any changes, copy the notebook and any potential dependent files to your root directory first (or shared personal directory).",
+    "crumbs": [
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Data Products</span>"
+    ]
+  },
+  {
+    "objectID": "collaboration.html",
+    "href": "collaboration.html",
+    "title": "6  Collaboration",
+    "section": "",
+    "text": "6.1 The ./shared/ Directory\nGeospatial science is often a collaborative effort. The Nostradamus Cube provides specialized shared directories to facilitate teamwork and resource sharing.\nThis directory is accessible to all users on the platform.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Collaboration</span>"
+    ]
+  },
+  {
+    "objectID": "collaboration.html#the-.shared-directory",
+    "href": "collaboration.html#the-.shared-directory",
+    "title": "6  Collaboration",
+    "section": "",
+    "text": "6.1.1 Read-Only Demonstrations Notebooks\nThe root of the ./shared/ directory usually contains files users want to share, and documentation (like the notebooks_demo directory). These files are read-only to ensure the core examples remain unchanged for everyone.\n\n\n6.1.2 User Sharing (./shared/all_users/)\nUnder ./shared/all_users/, you will find directories for each users.\n\nTransparency: You can browse directories and files made available by your colleagues.\nSharing: To share a notebook or other files, place a copy in your own shared directory under ./shared/all_users/&lt;your-username&gt;/.\nRead-Only Access: You can read and copy files from other users’ directories, but you cannot edit or delete them.\n\n\n\n\n\n\n\nTipBest Practices for Sharing\n\n\n\n\nCommunicate: If you share a draft, add “DRAFT”, a date (e.g. 20260320) or a version number to the filename.\nPrivacy: Only move files to ./shared/all_users/&lt;your-username&gt;/ that you are comfortable having the entire team see.\nSecurity: Never share notebooks containing hard-coded API keys, passwords, or personal credentials.",
+    "crumbs": [
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Collaboration</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html",
+    "href": "troubleshooting.html",
+    "title": "7  Troubleshooting",
+    "section": "",
+    "text": "7.1 Common Issues\nWhile the system is designed to be stable, you may occasionally encounter issues. Below are solutions to common problems.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Troubleshooting</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#common-issues",
+    "href": "troubleshooting.html#common-issues",
+    "title": "7  Troubleshooting",
+    "section": "",
+    "text": "7.1.1 Server Won’t Spawn\nSymptoms: After logging in, the loading bar gets stuck, or you see a “Spawn failed” error.\nCause: The system might be under heavy load, or a previous session didn’t shut down correctly.\nSolution: Wait for 30 seconds and refresh the page. If it persists, go to the Hub Control Panel (if accessible) and click Stop My Server, then Start My Server.\n\n\n7.1.2 Database Timeout (“Gateway Timeout”)\nSymptoms: JupyterLab loads, but running a cell with dc.load() or dc.list_products() hangs for a long time and then fails.\nCause: Usually occurs if the database is busy indexing new data or undergoing maintenance.\nSolution: Restart your kernel (Kernel -&gt; Restart Kernel…) and try again.\n\n\n7.1.3 “Read-only file system”\nSymptoms: You cannot save changes to a notebook.\nCause: You are likely trying to edit a file directly in the ./shared/ directory.\nSolution: Copy the file to Jupyter home directory (./) as explained in the Collaboration chapter.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Troubleshooting</span>"
+    ]
+  },
+  {
+    "objectID": "troubleshooting.html#how-to-reset-your-environment",
+    "href": "troubleshooting.html#how-to-reset-your-environment",
+    "title": "7  Troubleshooting",
+    "section": "7.2 How to Reset Your Environment",
+    "text": "7.2 How to Reset Your Environment\nIf your workspace is behaving unpredictably or you have installed incompatible Python packages:\n\nStop your server via the Hub Control Panel.\n\nLog out and log back in.\n\nIf issues persist, contact an administrator to have your user volume cleared (Note: This will delete your notebooks, so ensure you have a backup).\n\n\n\n\n\n\n\nWarningNote\n\n\n\nAlways check the Explorer first. If the Explorer is down, it is likely a system-wide maintenance issue.",
+    "crumbs": [
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Troubleshooting</span>"
+    ]
+  },
+  {
+    "objectID": "license.html",
+    "href": "license.html",
+    "title": "8  License",
+    "section": "",
+    "text": "This project is a fork of https://github.com/opendatacube/cube-in-a-box, and consequently inherits its MIT License.\n\n\n\nLicense: MIT\n\n\nCopyright © 2026 UNIGE/GRID-Geneva\nYou are free to use, modify, and distribute this software under the terms of the MIT License. For more details, see the full license text: MIT.",
+    "crumbs": [
+      "<span class='chapter-number'>8</span>  <span class='chapter-title'>License</span>"
+    ]
+  }
+]
