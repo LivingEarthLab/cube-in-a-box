@@ -40,3 +40,8 @@ logs/
 *.log
 tmp/
 .cache/
+# Quarto / documentation
+_book/
+.quarto/
+_freeze/
+**/*.quarto_ipynb

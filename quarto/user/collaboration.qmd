@@ -1,6 +1,6 @@
 # Collaboration
 
-Geospatial science is often a collaborative effort. The Nostradamus Cube provides specialized shared directories to facilitate teamwork and resource sharing.
+Geospatial science is often a collaborative effort. The Living Earth Cube provides specialized shared directories to facilitate teamwork and resource sharing.
 
 ## The `./shared/` Directory
 

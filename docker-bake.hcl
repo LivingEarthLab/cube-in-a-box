@@ -3,7 +3,7 @@ variable "PLATFORMS" {
 }
 
 variable "REGISTRY" {
-  default = "git.unepgrid.ch/nostradamus"
+  default = "ghcr.io/livingearthlab"
 }
 
 variable "TAG" {
@@ -36,7 +36,7 @@ target "hub_dev" {
 target "jupyter_dev" {
   context    = "."
   dockerfile = "Dockerfile"
-  tags       = ["cube-in-a-box-jupyter:dev"]
+  tags       = ["cube-in-a-box:dev"]
   output     = ["type=docker"]
 }
 
@@ -59,7 +59,7 @@ target "jupyter" {
   inherits   = ["_common_release"]
   context    = "."
   dockerfile = "Dockerfile"
-  tags       = ["${REGISTRY}/cube-in-a-box-jupyter:${TAG}"]
+  tags       = ["${REGISTRY}/cube-in-a-box:${TAG}"]
 }
 
 target "explorer" {

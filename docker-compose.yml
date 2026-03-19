@@ -67,7 +67,7 @@ services:
   # ---------------------------------------------------------------------------
   jupyter:
     profiles: [ init ]
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:${IMAGE_VERSION}
+    image: ghcr.io/livingearthlab/cube-in-a-box:${IMAGE_VERSION}
     init: true
     environment:
       # ODC database connection (using YAML anchor)
@@ -96,7 +96,7 @@ services:
   # JupyterHub - Multi-user notebook server with Docker-out-of-Docker spawning
   # ---------------------------------------------------------------------------
   jupyterhub:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-hub:${IMAGE_VERSION}
+    image: ghcr.io/livingearthlab/cube-in-a-box-hub:${IMAGE_VERSION}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
@@ -110,7 +110,7 @@ services:
       JUPYTERHUB_ADMINS: ${JUPYTERHUB_ADMINS}
       JUPYTERHUB_USERS: ${JUPYTERHUB_USERS}
       # Docker spawner configuration
-      DOCKER_JUPYTER_IMAGE: git.unepgrid.ch/nostradamus/cube-in-a-box-jupyter:${IMAGE_VERSION}
+      DOCKER_JUPYTER_IMAGE: ghcr.io/livingearthlab/cube-in-a-box:${IMAGE_VERSION}
       DOCKER_NETWORK_NAME: ${COMPOSE_PROJECT_NAME}-backend
       # HOST_* variables: Required for Docker-out-of-Docker pattern
       # JupyterHub spawns user containers and needs to know the HOST paths to mount them
@@ -147,7 +147,7 @@ services:
   # Explorer - Web UI for browsing Open Data Cube datasets
   # ---------------------------------------------------------------------------
   explorer:
-    image: git.unepgrid.ch/nostradamus/cube-in-a-box-explorer:${IMAGE_VERSION}
+    image: ghcr.io/livingearthlab/cube-in-a-box-explorer:${IMAGE_VERSION}
     environment:
       # ODC database connection (using YAML anchor)
       <<: *odc-db-env

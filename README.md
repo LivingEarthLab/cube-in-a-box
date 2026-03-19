@@ -1,8 +1,19 @@
 # Cube in a Box
 
-[![License: EUPL v1.2](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-The Cube in a Box is a simple way to run the [Open Data Cube](https://www.opendatacube.org). The current repository is a fork of [https://github.com/opendatacube/cube-in-a-box](https://github.com/opendatacube/cube-in-a-box).
+
+The Cube in a Box is a simple way to run the [Open Data Cube](https://www.opendatacube.org). The current repository is a fork of [https://github.com/opendatacube/cube-in-a-box](https://github.com/opendatacube/cube-in-a-box) with the following major changes:
+- Multi-user JupyterHub
+- shared folders for collaboration
+- Planetary Computer as a STAC datastore
+- ODC Explorer
+- Traefik integration as a reverse proxy
+- Multi-architecture support (AMD64 & ARM64)
+- Dask integration for parallel processing
+- Admin and User documentation (Quarto)
+
+All the developments have made possible thanks to the financial support of the European Union ‘Horizon Europe Program’ that funded the [LandShift](https://landshift.eu/) (Grant Agreement no. 101182007), [Nostradamus](https://nostradamus-project.eu) (Grant Agreement no. 101134888), and [NEMESIS](https://www.nemesis-soil.eu/) (Grant Agreement no. 101219087) projects.
 
 ## Repository Structure
 
@@ -18,6 +29,9 @@ The Cube in a Box is a simple way to run the [Open Data Cube](https://www.openda
   - `jupyterhub_data/`: JupyterHub database and state.
   - `local_data/`: Mapped to `/local_data` in containers.
   - `shared/`: Read-only shared folder for all users.
+- `docs/`: Built documentation (Quarto).
+- `quarto/`: Source files for documentation.
+- `products/`: ODC product definitions.
 
 ## How to use:
 
@@ -140,6 +154,19 @@ This repository uses environment variables to configure the local domain, databa
 | `JUPYTERHUB_ADMINS`   |      Yes | `admin`                | `admin,bruno`              | Comma-separated list of JupyterHub admin usernames.           |
 | `JUPYTERHUB_USERS`    |       No | `guest`                | `guest,alice,bob`          | Comma-separated list of authorized non-admin usernames.       |
 
+##### Advanced Variables (for Docker-out-of-Docker)
+
+These variables are automatically set in the environment but can be overridden if needed. They are crucial for mapping host paths to user container volumes when spawning containers from within the JupyterHub container.
+
+| Variable                  | Description                                                                 |
+| ------------------------- | --------------------------------------------------------------------------- |
+| `HOST_PRODUCTS_DIR`       | Host path to the `./products` directory.                                    |
+| `HOST_DATA_DIR`           | Host path to the `./data/local_data` directory.                             |
+| `HOST_DISTRIBUTED_CONFIG` | Host path to the `distributed.yaml` file.                                   |
+| `HOST_SHARED_STATIC`      | Host path to the `./shared` directory.                                      |
+| `HOST_USER_FOLDERS`        | Host path to the `./data/shared` directory.                                 |
+
+
 #### User Management
 
 JupyterHub uses NativeAuthenticator with a custom signup handler that restricts access to pre-authorized users only.
@@ -260,6 +287,7 @@ make help
 | `make down`            | Stop the running services (keeps your data and images)                                     |
 | `make status`          | Show what is running (containers and their status)                                         |
 | `make logs`            | Show live logs from all services (useful for troubleshooting)                              |
+| `make docs`            | Render Quarto documentation (Admin and User guides)                                        |
 | `make shell`           | Open a terminal inside the Jupyter container (requires HUB_USER)                           |
 | `make wait-for-db`     | Wait for PostgreSQL to be ready to accept connections                                      |
 | **Setup & Init**       |                                                                                            |
@@ -347,6 +375,24 @@ make help
 - JupyterHub is available on: `http://<DOMAIN>/jupyter/` (Use NativeAuthenticator for login - admin users defined in `JUPYTERHUB_ADMINS`)
 - Explorer is available on: `http://<DOMAIN>/explorer`
 
+#### Documentation
+
+Detailed documentation is available in the `docs/` directory (built using Quarto):
+- **Admin Guide**: [docs/admin/index.html](./docs/admin/index.html)
+- **User Guide**: [docs/user/index.html](./docs/user/index.html)
+
+#### Architecture and Integration
+
+##### Reverse Proxy and Routing
+This stack uses **Traefik v3** as a reverse proxy. It handles routing based on the hostname (`DOMAIN`) and path prefixes (`/jupyter`, `/explorer`). Traefik also manages the internal docker network for service communication.
+
+##### User Spawning (Docker-out-of-Docker)
+JupyterHub uses the `DockerSpawner` with a **Docker-out-of-Docker (DooD)** pattern. The JupyterHub container has access to the host's `/var/run/docker.sock`, allowing it to spawn user notebook containers directly on the host machine. This ensures that user environments are isolated and can be managed by standard Docker tools.
+
+##### Dask Integration
+The environment is pre-configured for **Dask** parallel processing. The `distributed.yaml` file ensures that the Dask dashboard is accessible through the Jupyter proxy at `/jupyter/proxy/{port}/status`.
+
+
 #### Shared Directory
 
 This directory is shared among users of the JupyterHub instance.
@@ -422,6 +468,7 @@ docker run --rm -v jupyterhub-user-<username>:/target -v $(pwd)/backups:/backup 
 
 This project is licensed under the **MIT License**.
 
+**Copyright (c) 2018 Alex Leith**
 **Copyright © 2025 UNIGE/GRID-Geneva**
 
 You are free to use, modify, and distribute this software under the terms of the MIT License.

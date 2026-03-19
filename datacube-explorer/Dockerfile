@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Multi arch build to guarantee cubedash patch will work -> To be updated when official release is out
-FROM git.unepgrid.ch/nostradamus/explorer:3.1.2@sha256:9d4a5f81c167ac45156830c93b7c27bf42bee19d09c91b85dc1482dbdf88f88c AS runtime
+FROM ghcr.io/livingearthlab/datacube-explorer:3.1.5@sha256:d2f17dba4a7b956217d8abeb48ebec3c420f205e939ecc74160f61fed5a9cfed AS runtime
 
-LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
+LABEL org.opencontainers.image.source="https://github.com/LivingEarthLab/cube-in-a-box" \
     org.opencontainers.image.description="Datacube Explorer with planetary-computer support" \
     org.opencontainers.image.licenses="Apache-2.0"
 

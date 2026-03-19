@@ -24,7 +24,8 @@
 .PHONY: backup build build-nocache clean down help index index-esa-worldcover index-io-lulc-annual-v02 \
         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-nasadem index-parallel \
         index-sentinel-1-rtc index-sentinel-2-l2a index-serie init logs product pull purge-data \
-        purge-user purge-users release-push restore setup shell status up update-explorer wait-for-db
+        purge-user purge-users release-push restore setup shell status up update-explorer wait-for-db \
+        docs
 .DEFAULT_GOAL := help
 
 # Mode selection: prod (default) or dev
@@ -191,6 +192,16 @@ init: wait-for-db ## Initialize the Open Data Cube database (run once after setu
 
 logs: ## Show live logs from all services (useful for troubleshooting)
 	@$(DC) logs --follow
+
+docs: ## Render Quarto documentation (Admin and User guides)
+	@echo "Rendering Admin Guide..."
+	@quarto render quarto/admin
+	@mkdir -p docs/admin
+	@cp -r quarto/admin/_book/* docs/admin/
+	@echo "Rendering User Guide..."
+	@quarto render quarto/user
+	@mkdir -p docs/user
+	@cp -r quarto/user/_book/* docs/user/
 
 product: ## Load product definitions into the database (describes available datasets)
 	@$(DC) --profile init run --rm jupyter bash -lc "datacube product add /conf/*.odc-product.yaml"

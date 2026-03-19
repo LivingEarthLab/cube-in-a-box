@@ -2,19 +2,19 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "title": "Living Earth Cube-in-a-Box - User Guide",
     "section": "",
-    "text": "1 Overview\nWelcome to the Nostradamus Cube-in-a-Box User Guide. This manual is designed to help you navigate and use the Open Data Cube (ODC) platform for geospatial analysis and remote sensing.",
+    "text": "1 Overview\nWelcome to the Living Earth Cube-in-a-Box User Guide. This manual is designed to help you navigate and use the Open Data Cube (ODC) platform for geospatial analysis and remote sensing.\nAll the developments have made possible thanks to the financial support of the European Union ‘Horizon Europe Program’ that funded the LandShift (Grant Agreement no. 101182007), Nostradamus (Grant Agreement no. 101134888), and NEMESIS (Grant Agreement no. 101219087) projects.",
     "crumbs": [
       "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
     ]
   },
   {
-    "objectID": "index.html#what-is-nostradamus-cube-in-a-box-ciab",
-    "href": "index.html#what-is-nostradamus-cube-in-a-box-ciab",
-    "title": "Nostradamus Cube-in-a-Box - User Guide",
-    "section": "1.1 What is Nostradamus Cube-in-a-box (CiaB)?",
-    "text": "1.1 What is Nostradamus Cube-in-a-box (CiaB)?\nThe Nostradamus CiaB is a specialized instance of the Open Data Cube, packaged for rapid deployment and accessibility. It provides a pre-configured environment with all the necessary tools to:\n\nBrowse massive collections of satellite imagery.\nRun Python-based geospatial analysis using Jupyter Notebooks.\nShare results and collaborate with other researchers.",
+    "objectID": "index.html#what-is-living-earth-cube-in-a-box-ciab",
+    "href": "index.html#what-is-living-earth-cube-in-a-box-ciab",
+    "title": "Living Earth Cube-in-a-Box - User Guide",
+    "section": "1.1 What is Living Earth Cube-in-a-box (CiaB)?",
+    "text": "1.1 What is Living Earth Cube-in-a-box (CiaB)?\nThe Living Earth CiaB is a specialized instance of the Open Data Cube, packaged for rapid deployment and accessibility. It provides a pre-configured environment with all the necessary tools to:\n\nBrowse massive collections of satellite imagery.\nRun Python-based geospatial analysis using Jupyter Notebooks.\nShare results and collaborate with other researchers.",
     "crumbs": [
       "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
     ]
@@ -22,7 +22,7 @@
   {
     "objectID": "index.html#core-platforms",
     "href": "index.html#core-platforms",
-    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "title": "Living Earth Cube-in-a-Box - User Guide",
     "section": "1.2 Core Platforms",
     "text": "1.2 Core Platforms\nTo interact with the system, you will primarily use two web interfaces:\n\nJupyter: http://&lt;DOMAIN&gt;/jupyter/\n\nYour primary analytical workspace.\nWrite and execute Python notebooks.\nAccess a persistent Linux home directory.\n\nExplorer: http://&lt;DOMAIN&gt;/explorer\n\nA visual web interface to browse available datasets.\nFilter products by area and time.\nView spatial and temporal coverage of indexed data.\nDownload data.",
     "crumbs": [
@@ -32,7 +32,7 @@
   {
     "objectID": "index.html#how-to-use-this-guide",
     "href": "index.html#how-to-use-this-guide",
-    "title": "Nostradamus Cube-in-a-Box - User Guide",
+    "title": "Living Earth Cube-in-a-Box - User Guide",
     "section": "1.3 How to use this guide",
     "text": "1.3 How to use this guide\nIf you are a new user, start with the Account Setup section to gain access. Once authorized, explore the Workspace and Explorer sections to understand how to interact with the data.\nFor ready-to-use analysis templates, refer to the Data Products chapter which links directly to demonstration notebooks.",
     "crumbs": [
@@ -44,7 +44,7 @@
     "href": "setup.html",
     "title": "2  Account Setup",
     "section": "",
-    "text": "2.1 Self-Service Signup\nAccess to the Nostradamus CiaB is restricted to authorized users. Follow these steps to create your account and gain access.\nOnce you have been notified that your username is authorized:\nIf successful, you will see a message: “The signup was successful! You can now go to the home page and log in to the system.”",
+    "text": "2.1 Self-Service Signup\nAccess to the Living Earth CiaB is restricted to authorized users. Follow these steps to create your account and gain access.\nOnce you have been notified that your username is authorized:\nIf successful, you will see a message: “The signup was successful! You can now go to the home page and log in to the system.”",
     "crumbs": [
       "<span class='chapter-number'>2</span>  <span class='chapter-title'>Account Setup</span>"
     ]
@@ -154,7 +154,7 @@
     "href": "products.html",
     "title": "5  Data Products",
     "section": "",
-    "text": "5.1 Available Datasets\nThe Nostradamus Cube comes pre-loaded with several high-value geospatial datasets. To help you get started quickly, we provide a collection of Demonstration Notebooks located in ./shared/notebooks_demo/.\nCommon products indexed in the system include:",
+    "text": "5.1 Available Datasets\nThe Living Earth Cube comes pre-loaded with several high-value geospatial datasets. To help you get started quickly, we provide a collection of Demonstration Notebooks located in ./shared/notebooks_demo/.\nCommon products indexed in the system include:",
     "crumbs": [
       "<span class='chapter-number'>5</span>  <span class='chapter-title'>Data Products</span>"
     ]
@@ -184,7 +184,7 @@
     "href": "collaboration.html",
     "title": "6  Collaboration",
     "section": "",
-    "text": "6.1 The ./shared/ Directory\nGeospatial science is often a collaborative effort. The Nostradamus Cube provides specialized shared directories to facilitate teamwork and resource sharing.\nThis directory is accessible to all users on the platform.",
+    "text": "6.1 The ./shared/ Directory\nGeospatial science is often a collaborative effort. The Living Earth Cube provides specialized shared directories to facilitate teamwork and resource sharing.\nThis directory is accessible to all users on the platform.",
     "crumbs": [
       "<span class='chapter-number'>6</span>  <span class='chapter-title'>Collaboration</span>"
     ]
@@ -234,7 +234,7 @@
     "href": "license.html",
     "title": "8  License",
     "section": "",
-    "text": "This project is a fork of https://github.com/opendatacube/cube-in-a-box, and consequently inherits its MIT License.\n\n\n\nLicense: MIT\n\n\nCopyright © 2026 UNIGE/GRID-Geneva\nYou are free to use, modify, and distribute this software under the terms of the MIT License. For more details, see the full license text: MIT.",
+    "text": "This project is a fork of https://github.com/opendatacube/cube-in-a-box, and consequently inherits its MIT License.\n\n\n\nLicense: MIT\n\n\nCopyright (c) 2018 Alex Leith\nCopyright © 2026 UNIGE/GRID-Geneva\nYou are free to use, modify, and distribute this software under the terms of the MIT License. For more details, see the full license text: MIT.",
     "crumbs": [
       "<span class='chapter-number'>8</span>  <span class='chapter-title'>License</span>"
     ]

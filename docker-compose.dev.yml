@@ -1,12 +1,12 @@
 services:
   jupyter:
-    image: cube-in-a-box-jupyter:dev
+    image: cube-in-a-box:dev
     pull_policy: never
 
   jupyterhub:
     image: cube-in-a-box-hub:dev
     environment:
-      - DOCKER_JUPYTER_IMAGE=cube-in-a-box-jupyter:dev
+      - DOCKER_JUPYTER_IMAGE=cube-in-a-box:dev
 
   explorer:
     image: cube-in-a-box-explorer:dev

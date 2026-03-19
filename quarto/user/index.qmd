@@ -1,9 +1,11 @@
 # Overview
 
-Welcome to the **Nostradamus Cube-in-a-Box User Guide**. This manual is designed to help you navigate and use the Open Data Cube (ODC) platform for geospatial analysis and remote sensing.
+Welcome to the **Living Earth Cube-in-a-Box User Guide**. This manual is designed to help you navigate and use the Open Data Cube (ODC) platform for geospatial analysis and remote sensing.
 
-## What is Nostradamus Cube-in-a-box (CiaB)?
-The Nostradamus CiaB is a specialized instance of the [Open Data Cube](https://opendatacube.org/), packaged for rapid deployment and accessibility. It provides a pre-configured environment with all the necessary tools to:
+All the developments have made possible thanks to the financial support of the European Union ‘Horizon Europe Program’ that funded the [LandShift](https://landshift.eu/) (Grant Agreement no. 101182007), [Nostradamus](https://nostradamus-project.eu) (Grant Agreement no. 101134888), and [NEMESIS](https://www.nemesis-soil.eu/) (Grant Agreement no. 101219087) projects.
+
+## What is Living Earth Cube-in-a-box (CiaB)?
+The Living Earth CiaB is a specialized instance of the [Open Data Cube](https://opendatacube.org/), packaged for rapid deployment and accessibility. It provides a pre-configured environment with all the necessary tools to:
 
 - Browse massive collections of satellite imagery.
 - Run Python-based geospatial analysis using Jupyter Notebooks.

@@ -1,6 +1,6 @@
 # Data Products
 
-The Nostradamus Cube comes pre-loaded with several high-value geospatial datasets. To help you get started quickly, we provide a collection of **Demonstration Notebooks** located in `./shared/notebooks_demo/`.
+The Living Earth Cube comes pre-loaded with several high-value geospatial datasets. To help you get started quickly, we provide a collection of **Demonstration Notebooks** located in `./shared/notebooks_demo/`.
 
 ## Available Datasets
 Common products indexed in the system include:

@@ -1,6 +1,6 @@
 # Execution Modes
 
-Nostradamus Cube-in-a-Box supports two execution modes: **Production** (`prod`) and **Development** (`dev`). The `MODE` environment variable determines which Docker Compose configuration is used.
+Living Earth Cube-in-a-Box supports two execution modes: **Production** (`prod`) and **Development** (`dev`). The `MODE` environment variable determines which Docker Compose configuration is used.
 
 | Mode | Purpose | Image Source | Compose Files |
 | :--- | :--- | :--- | :--- |

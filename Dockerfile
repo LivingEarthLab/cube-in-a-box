@@ -1,6 +1,6 @@
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.12.1
 
-LABEL org.opencontainers.image.source="https://git.unepgrid.ch/NOSTRADAMUS/cube-in-a-box-jupyter" \
+LABEL org.opencontainers.image.source="https://github.com/LivingEarthLab/cube-in-a-box" \
     org.opencontainers.image.description="The Cube in a Box is a simple way to run the Open Data Cube." \
     org.opencontainers.image.licenses="MIT"
 

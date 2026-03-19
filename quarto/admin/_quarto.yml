@@ -1,6 +1,6 @@
 project:
   type: book
-  output-dir: ../../docs/admin
+  output-dir: _book
   pre-render:
     - cp ../../LICENSE ./LICENSE.txt
     - cp ../../license-MIT.png ./license-MIT.png
@@ -9,7 +9,7 @@ filters:
   - ../git-icon.lua
 
 book:
-  title: "Nostradamus Cube-in-a-Box - Admin Guide"
+  title: "Living Earth Cube-in-a-Box - Admin Guide"
   author: "Bruno Chatenoux"
   date: "2026-03-05"
   downloads: [pdf]
@@ -19,7 +19,7 @@ book:
       # - text: "Admin Guide"
       #   href: index.qmd
       - text: "| User Guide"
-        href: ../../user/_book/index.html
+        href: ../user/index.html
   chapters:
     - index.qmd
     - prerequisites.qmd

@@ -1,6 +1,6 @@
 # Account Setup
 
-Access to the Nostradamus CiaB is restricted to authorized users. Follow these steps to create your account and gain access.
+Access to the Living Earth CiaB is restricted to authorized users. Follow these steps to create your account and gain access.
 
 ::: {.callout-warning}
 ## Note

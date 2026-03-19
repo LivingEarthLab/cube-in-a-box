@@ -2,9 +2,9 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Nostradamus Cube-in-a-Box - Admin Guide",
+    "title": "Living Earth Cube-in-a-Box - Admin Guide",
     "section": "",
-    "text": "1 Overview\nWelcome to the Nostradamus Cube-in-a-Box Admin Manual. This guide is intended for system administrators responsible for setting up, configuring, and maintaining the Open Data Cube (ODC) environment.\nThe Nostradamus Cube-in-a-Box is a streamlined platform for running the Open Data Cube. It leverages Docker and GNU Make to simplify the deployment of a full stack including:\n\nJupyterHub: Multi-user server management that provides each user with a JupyterLab notebook environment.\nPostgreSQL/PostGIS: Database for ODC metadata.\nExplorer: Web UI for browsing datasets.\nTraefik: Reverse proxy and edge router.\n\nThe current repository is a fork of https://github.com/opendatacube/cube-in-a-box.",
+    "text": "1 Overview\nWelcome to the Living Earth Cube-in-a-Box Admin Manual. This guide is intended for system administrators responsible for setting up, configuring, and maintaining the Open Data Cube (ODC) environment.\nThe Living Earth Cube-in-a-Box is a streamlined platform for running the Open Data Cube. It leverages Docker and GNU Make to simplify the deployment of a full stack including:\n\nJupyterHub: Multi-user server management that provides each user with a JupyterLab notebook environment.\nPostgreSQL/PostGIS: Database for ODC metadata.\nExplorer: Web UI for browsing datasets.\nTraefik: Reverse proxy and edge router.\n\nThe current repository is a fork of https://github.com/opendatacube/cube-in-a-box with the following major changes:\n\nMulti-user JupyterHub\nshared folders for collaboration\nPlanetary Computer as a STAC datastore\nODC Explorer\nTraefik integration as a reverse proxy\nMulti-architecture support (AMD64 & ARM64)\nDask integration for parallel processing\nAdmin and User documentation (Quarto)\n\nAll the developments have made possible thanks to the financial support of the European Union ‘Horizon Europe Program’ that funded the LandShift (Grant Agreement no. 101182007), Nostradamus (Grant Agreement no. 101134888), and NEMESIS (Grant Agreement no. 101219087) projects.",
     "crumbs": [
       "<span class='chapter-number'>1</span>  <span class='chapter-title'>Overview</span>"
     ]
@@ -174,7 +174,7 @@
     "href": "execution-modes.html",
     "title": "7  Execution Modes",
     "section": "",
-    "text": "7.1 Production Mode (prod)\nNostradamus Cube-in-a-Box supports two execution modes: Production (prod) and Development (dev). The MODE environment variable determines which Docker Compose configuration is used.\nThis is the default mode. It pulls official images from the registry and is optimized for stability.",
+    "text": "7.1 Production Mode (prod)\nLiving Earth Cube-in-a-Box supports two execution modes: Production (prod) and Development (dev). The MODE environment variable determines which Docker Compose configuration is used.\nThis is the default mode. It pulls official images from the registry and is optimized for stability.",
     "crumbs": [
       "<span class='chapter-number'>7</span>  <span class='chapter-title'>Execution Modes</span>"
     ]
@@ -264,7 +264,7 @@
     "href": "license.html",
     "title": "11  License",
     "section": "",
-    "text": "This project is a fork of https://github.com/opendatacube/cube-in-a-box, and consequently inherits its MIT License.\n\n\n\nLicense: MIT\n\n\nCopyright © 2026 UNIGE/GRID-Geneva\nYou are free to use, modify, and distribute this software under the terms of the MIT License. For more details, see the full license text: MIT.",
+    "text": "This project is a fork of https://github.com/opendatacube/cube-in-a-box, and consequently inherits its MIT License.\n\n\n\nLicense: MIT\n\n\nCopyright (c) 2018 Alex Leith\nCopyright © 2026 UNIGE/GRID-Geneva\nYou are free to use, modify, and distribute this software under the terms of the MIT License. For more details, see the full license text: MIT.",
     "crumbs": [
       "<span class='chapter-number'>11</span>  <span class='chapter-title'>License</span>"
     ]

@@ -1,5 +1,7 @@
 FROM jupyterhub/jupyterhub:5.4
 
+LABEL org.opencontainers.image.source="https://github.com/LivingEarthLab/cube-in-a-box"
+
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     JUPYTERHUB_CONFIG=/srv/jupyterhub/jupyterhub_config.py

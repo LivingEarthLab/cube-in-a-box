@@ -5,6 +5,7 @@ This project is a fork of [https://github.com/opendatacube/cube-in-a-box](https:
 
 [![License: MIT](license-MIT.png)](LICENSE.txt)
 
+**Copyright (c) 2018 Alex Leith**  
 **Copyright © 2026 UNIGE/GRID-Geneva**
 
 You are free to use, modify, and distribute this software under the terms of the MIT License.
