@@ -67,7 +67,7 @@ But admin users can add new users through the JupyterHub admin panel.
 
 **Edit user:**
 
-1. Click "Edit User" next to any user.  
+1. Click "Stop Server" and then "Edit User" next to any user.  
 2. You can make them admin, delete them, or manage their servers.
 
 **Delete user:**

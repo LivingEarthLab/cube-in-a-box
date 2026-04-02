@@ -45,3 +45,8 @@ _book/
 .quarto/
 _freeze/
 **/*.quarto_ipynb
+README.html
+*_files/
+
+# Runtime locks
+**/.entry_point.lock

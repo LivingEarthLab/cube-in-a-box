@@ -189,6 +189,8 @@ index-serie: ## Index data step-by-step (older method; slower)
 
 init: wait-for-db ## Initialize the Open Data Cube database (run once after setup)
 	@$(DC) --profile init run --rm jupyter datacube -v system init
+	@echo "Setting up read-only user and permissions..."
+	@$(DC) exec -T postgres sh -lc 'PGPASSWORD="$$POSTGRES_PASS" psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DBNAME" -f /docker-entrypoint-initdb.d/init-ro-user.sql'
 
 logs: ## Show live logs from all services (useful for troubleshooting)
 	@$(DC) logs --follow

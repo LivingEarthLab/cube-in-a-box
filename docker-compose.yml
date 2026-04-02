@@ -49,6 +49,7 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
     volumes:
       - ./data/pg:/var/lib/postgresql/
+      - ./hub/postgres-init:/docker-entrypoint-initdb.d/
     healthcheck:
       test: [ "CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p ${POSTGRES_PORT}" ]
       interval: 10s
@@ -101,6 +102,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/jupyterhub_data:/data
       - ./hub/jupyterhub_config.py:/srv/jupyterhub/jupyterhub_config.py
+      - ./hub/spawner_hooks.py:/srv/jupyterhub/spawner_hooks.py
+      - ./hub/custom_authenticator.py:/srv/jupyterhub/custom_authenticator.py
       - ./shared:/shared_static:ro
       - ./data/shared:/shared_users
     environment:
@@ -109,6 +112,9 @@ services:
       # User management
       JUPYTERHUB_ADMINS: ${JUPYTERHUB_ADMINS}
       JUPYTERHUB_USERS: ${JUPYTERHUB_USERS}
+      # Read-only database credentials
+      POSTGRES_READONLY_USER: ${POSTGRES_READONLY_USER:-odc_read_only}
+      POSTGRES_READONLY_PASS: ${POSTGRES_READONLY_PASS:-odc_read_only_password}
       # Docker spawner configuration
       DOCKER_JUPYTER_IMAGE: ghcr.io/livingearthlab/cube-in-a-box:${IMAGE_VERSION}
       DOCKER_NETWORK_NAME: ${COMPOSE_PROJECT_NAME}-backend
@@ -119,6 +125,7 @@ services:
       HOST_DISTRIBUTED_CONFIG: ${PWD}/distributed.yaml
       HOST_SHARED_STATIC: ${PWD}/shared
       HOST_USER_FOLDERS: ${PWD}/data/shared
+      HOST_SCRIPTS_DIR: ${PWD}/scripts
     depends_on:
       postgres:
         condition: service_healthy

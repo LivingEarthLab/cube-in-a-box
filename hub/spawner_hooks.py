@@ -21,10 +21,12 @@ def setup_user_environment(spawner):
         spawner: DockerSpawner instance for the user being spawned
     """
     username = spawner.user.name
+    print(f"DEBUG: Provisioning environment for user: {username}")
 
     # Get environment variables for HOST paths (used for mounting in user containers)
     host_shared_static = os.environ.get("HOST_SHARED_STATIC", "")  # ./shared on host
     host_user_folders = os.environ.get("HOST_USER_FOLDERS", "")  # ./data/shared on host
+    host_scripts_dir = os.environ.get("HOST_SCRIPTS_DIR", "")  # ./scripts on host
 
     # Container paths (where these directories are mounted in THIS jupyterhub container)
     container_shared_static = "/shared_static"  # ./shared mounted here
@@ -39,8 +41,66 @@ def setup_user_environment(spawner):
     # Mount user folders with proper permissions
     _mount_user_folders(spawner, username, host_user_folders, container_user_folders)
     
-    # Configure admin privileges
+    # Grant sudo privileges to admin users
     _configure_admin_privileges(spawner)
+    
+    # Mount local data with dynamic permissions (admin only)
+    _mount_local_data(spawner)
+    
+    # Mount the host script to override the one in the image (ensures fix is applied)
+    if host_scripts_dir:
+        spawner.volumes[f"{host_scripts_dir}/start.sh"] = {
+            "bind": "/usr/local/bin/start.sh",
+            "mode": "ro"
+        }
+
+
+def _mount_local_data(spawner):
+    """
+    Mount /local_data with rw or ro permissions based on admin status.
+    
+    Admins get 'rw' access and production database credentials.
+    Regular users get 'ro' access and read-only database credentials.
+    """
+    host_data_dir = os.environ.get("HOST_DATA_DIR", "")
+    if not host_data_dir:
+        return
+
+    # Check if user is admin
+    is_admin = spawner.user.admin
+    
+    # Get database connection details from environment
+    db_host = os.environ.get("POSTGRES_HOSTNAME", "postgres")
+    db_port = os.environ.get("POSTGRES_PORT", "5432")
+    db_name = os.environ.get("POSTGRES_DBNAME", "opendatacube")
+
+    if is_admin:
+        mode = "rw"
+        restrict_datacube = "no"
+        # Admin credentials (from environment)
+        db_user = os.environ.get("POSTGRES_USER", "opendatacube")
+        db_pass = os.environ.get("POSTGRES_PASS", "opendatacubepassword")
+    else:
+        mode = "ro"
+        restrict_datacube = "yes"
+        # Read-only credentials
+        db_user = os.environ.get("POSTGRES_READONLY_USER", "odc_read_only")
+        db_pass = os.environ.get("POSTGRES_READONLY_PASS", "odc_read_only_password")
+    
+    # Construct ODC_DEFAULT_DB_URL
+    db_url = f"postgresql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+
+    # Mount the volume
+    spawner.volumes[host_data_dir] = {"bind": "/local_data", "mode": mode}
+    
+    # Set environment variables for the spawned container
+    print(f"DEBUG: User {spawner.user.name} permissions - mode: {mode}, restrict_datacube: {restrict_datacube}")
+    spawner.environment.update({
+        "RESTRICT_DATACUBE": restrict_datacube,
+        "ODC_DEFAULT_DB_USERNAME": db_user,
+        "ODC_DEFAULT_DB_PASSWORD": db_pass,
+        "ODC_DEFAULT_DB_URL": db_url,
+    })
 
 
 def _create_user_folder(username, container_user_folders):

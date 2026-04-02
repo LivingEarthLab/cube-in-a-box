@@ -65,7 +65,6 @@ c.DockerSpawner.notebook_dir = notebook_dir
 c.DockerSpawner.volumes = {
     "jupyterhub-user-{username}": notebook_dir,
     os.environ.get("HOST_PRODUCTS_DIR"): {"bind": "/conf", "mode": "ro"},
-    os.environ.get("HOST_DATA_DIR"): {"bind": "/local_data", "mode": "rw"},
     os.environ.get("HOST_DISTRIBUTED_CONFIG"): {
         "bind": "/etc/dask/distributed.yaml",
         "mode": "ro",
@@ -73,8 +72,10 @@ c.DockerSpawner.volumes = {
 }
 
 
-# Remove containers once they are stopped
-c.DockerSpawner.remove = False
+# Always remove containers when stopped so they are recreated on next spawn.
+# This ensures changes to admin status (and therefore permissions, credentials,
+# and /local_data mount mode) are picked up on the next login.
+c.DockerSpawner.remove = True
 
 # For debugging arguments
 c.DockerSpawner.debug = True

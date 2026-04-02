@@ -1,10 +1,14 @@
 #!/bin/bash
 set -e
 
-# Fix ownership of /local_data if it exists
+# Fix ownership of /local_data if it exists and is writable
 if [ -d "/local_data" ]; then
-    echo "Fixing /local_data ownership..."
-    chown -R 1000:100 /local_data
+    if [ -w "/local_data" ]; then
+        echo "Fixing /local_data ownership..."
+        chown -R 1000:100 /local_data
+    else
+        echo "Skipping /local_data ownership fix (/local_data is read-only)"
+    fi
 fi
 
 # Handle sudo permissions if requested
@@ -16,6 +20,13 @@ else
     echo "Restricting sudo access for non-admin user..."
     # Only root can execute sudo; typical users will get "Permission denied"
     chmod 0700 $(command -v sudo)
+fi
+
+# Handle datacube CLI restriction if requested
+if [ "$RESTRICT_DATACUBE" == "yes" ]; then
+    echo "Using read-only database credentials for datacube..."
+    # Note: We no longer chmod 0700 the binary because it broke the Python library.
+    # Security is now enforced at the database level via the read-only user.
 fi
 
 # Switch to jupyter user for execution if currently root

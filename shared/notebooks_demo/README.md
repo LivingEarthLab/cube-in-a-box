@@ -25,8 +25,8 @@ This directory contains a collection of Jupyter notebooks demonstrating various 
 
 | Notebook | Description | Key Modules/Tools |
 | :--- | :--- | :--- |
-| **[cogs_fs_indexation.ipynb](./cogs_fs_indexation.ipynb)** | Prepare metadata and index existing COGs as a new product. | `add_product`, `add_dataset` |
-| **[STAC_to_fs.ipynb](./STAC_to_fs.ipynb)** | Demonstrates converting STAC metadata to a filesystem structure for local indexing. | `pystac`, `odc.geo` |
+| **[cogs_fs_indexation.ipynb](./cogs_fs_indexation.ipynb)** | ADMIN ONLY! Prepare metadata and index existing COGs as a new product. | `add_product`, `add_dataset` |
+| **[STAC_to_fs.ipynb](./STAC_to_fs.ipynb)** | ADMIN ONLY! Demonstrates converting STAC metadata to a filesystem structure for local indexing. | `pystac`, `odc.geo` |
 | **[Test_fs_indexation.ipynb](./Test_fs_indexation.ipynb)** | Verification and exploration of data recently indexed into the datacube from local storage. | `datacube`, `ipyleaflet` |
 
 ## Quick Start

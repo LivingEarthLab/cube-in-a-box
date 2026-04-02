@@ -1,6 +1,7 @@
 import rasterio
 import re
 import subprocess
+import sys
 import yaml
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -24,11 +25,9 @@ def add_product(product_definition):
             data = yaml.safe_load(f)
         product_name = data['metadata']['product']['name']
     except FileNotFoundError:
-        print(f"Error: The file {product_definition} was not found.")
-        return None
+        sys.exit(f"Error: The file {product_definition} was not found.")
     except (yaml.YAMLError, KeyError, TypeError) as e:
-        print(f"Error parsing product name from YAML: {e}")
-        return None
+        sys.exit(f"Error parsing product name from YAML: {e}")
         
     
     cmd = ["datacube", "product", "add", product_definition]
@@ -41,7 +40,10 @@ def add_product(product_definition):
                 )
     
     if result.stderr != '':
-        print(result.stderr)
+        if result.returncode==1:
+            sys.exit(result.stderr)
+        else:
+            print(result.stderr)
     else:
         print(f"{product_name} product added successfully")
     return product_name
