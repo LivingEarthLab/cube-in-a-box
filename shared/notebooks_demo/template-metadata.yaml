@@ -1,0 +1,30 @@
+$schema: https://schemas.opendatacube.org/dataset
+id: <id>
+label: <label>
+product:
+  name: <product>
+crs: epsg:<crs>
+geometry:
+  type: Polygon
+  coordinates: [[[<coordinates>]]]
+grids:
+  default:
+    shape: [<shape>]
+    transform: [<transform>]
+properties:
+  created: '<created>'
+  datetime: '<dt>'
+  description: '<description>'
+  eo:gsd: '<gsd>'
+  eo:instrument: '<instrument>'
+  eo:platform: '<platform>'
+  odc:processing_datetime: '<processing_datetime>'
+  odc:product: '<product>'
+  proj:epsg: '<epsg>'
+  proj:shape:
+  <shape>
+  proj:transform:
+  <transform>
+measurements:
+  <bands_dict>
+lineage: {}

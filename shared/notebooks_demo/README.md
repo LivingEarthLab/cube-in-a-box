@@ -19,12 +19,13 @@ This directory contains a collection of Jupyter notebooks demonstrating various 
 | **[Landsat_Collection_2_Level-2_Science_Products.ipynb](./Landsat_Collection_2_Level-2_Science_Products.ipynb)** | Covers processing Landsat C2 L2 products, including DN to SR conversion. | `datacube`, `dask` |
 | **[NASADEM.ipynb](./NASADEM.ipynb)** | Focuses on loading NASADEM products and computing hillshade for elevation display. | `datacube`, `matplotlib`, `rich_dem` |
 | **[Sentinel_1_rtc.ipynb](./Sentinel_1_rtc.ipynb)** | Covers loading and exporting Sentinel-1 Radiometrically Terrain Corrected (RTC) images. | `datacube`, `odc.geo.xr.write_cog` |
-| **[Sentinel_2.ipynb](./Sentinel_2.ipynb)** | Introduction to Sentinel-2 L2A surface reflectance data, including cloud masking. | `datacube`, `load_ard` |
+| **[Sentinel_2.ipynb](./Sentinel_2.ipynb)** | Introduction to Sentinel-2 L2A surface reflectance data, including cloud masking, time statistics and export as COGs. | `datacube`, `load_ard`, `rio.to_raster` |
 
 ## Tools Notebook Serie
 
 | Notebook | Description | Key Modules/Tools |
 | :--- | :--- | :--- |
+| **[cogs_fs_indexation.ipynb](./cogs_fs_indexation.ipynb)** | Prepare metadata and index existing COGs as a new product. | `add_product`, `add_dataset` |
 | **[STAC_to_fs.ipynb](./STAC_to_fs.ipynb)** | Demonstrates converting STAC metadata to a filesystem structure for local indexing. | `pystac`, `odc.geo` |
 | **[Test_fs_indexation.ipynb](./Test_fs_indexation.ipynb)** | Verification and exploration of data recently indexed into the datacube from local storage. | `datacube`, `ipyleaflet` |
 

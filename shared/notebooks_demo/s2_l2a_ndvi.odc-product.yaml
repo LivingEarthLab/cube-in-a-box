@@ -1,0 +1,26 @@
+# source: https://raw.githubusercontent.com/digitalearthafrica/config/master/products/esa_s2_l2a.odc-product.yaml
+
+---
+name: s2_l2a_ndvi
+description: NDVI from Sentinel-2a and Sentinel-2b imagery, processed to Level
+  2A (Surface Reflectance) and converted to Cloud Optimized GeoTIFFs
+metadata_type: eo3
+
+metadata:
+  product:
+    name: s2_l2a_ndvi
+
+measurements:
+  - name: "ndvi_mean"
+    aliases: [mean, average]
+    units: "1"
+    dtype: float32
+    nodata: NaN
+  - name: "ndvi_min"
+    units: "1"
+    dtype: float32
+    nodata: NaN
+  - name: "ndvi_max"
+    units: "1"
+    dtype: float32
+    nodata: NaN
