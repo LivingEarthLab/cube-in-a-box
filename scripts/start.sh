@@ -29,6 +29,9 @@ if [ "$RESTRICT_DATACUBE" == "yes" ]; then
     # Security is now enforced at the database level via the read-only user.
 fi
 
+# Export PYTHONPATH to include shared packages (e.g. installed via make install-le)
+export PYTHONPATH="/local_data/site-packages:${PYTHONPATH:-}"
+
 # Switch to jupyter user for execution if currently root
 if [ "$(id -u)" == "0" ]; then
     echo "Switching to jupyter user..."
@@ -43,7 +46,7 @@ if [ "$(id -u)" == "0" ]; then
 
     # We use sudo -E to preserve environment variables
     # We use exec to replace the shell process
-    exec sudo -E -u jupyter "PATH=$PATH" "HOME=/home/jupyter" "$@"
+    exec sudo -E -u jupyter "PATH=$PATH" "HOME=/home/jupyter" "PYTHONPATH=$PYTHONPATH" "$@"
 else
     exec "$@"
 fi

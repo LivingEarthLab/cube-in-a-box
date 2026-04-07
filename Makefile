@@ -23,7 +23,7 @@
 
 .PHONY: backup build build-nocache clean down help index index-esa-worldcover index-io-lulc-annual-v02 \
         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-nasadem index-parallel \
-        index-sentinel-1-rtc index-sentinel-2-l2a index-serie init logs product pull purge-data \
+        index-sentinel-1-rtc index-sentinel-2-l2a index-serie init install-le logs product pull purge-data \
         purge-user purge-users release-push restore setup shell status up update-explorer wait-for-db \
         docs
 .DEFAULT_GOAL := help
@@ -186,6 +186,11 @@ index-serie: ## Index data step-by-step (older method; slower)
 	@$(MAKE) index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
 	         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
 	         index-sentinel-1-rtc index-esa-worldcover
+
+install-le: ## Install the LivingEarth LCCS package into the shared local_data volume
+	@echo "Installing livingearth_lccs into shared local_data volume..."
+	@$(DC) --profile init run --rm jupyter bash -lc "mkdir -p /local_data/site-packages && rm -rf /tmp/le_lccs_install && git clone https://bitbucket.org/au-eoed/livingearth_lccs.git --single-branch --branch main --depth 1 /tmp/le_lccs_install && pip install --target /local_data/site-packages /tmp/le_lccs_install/. && rm -rf /tmp/le_lccs_install"
+	@echo "Installation complete. The package 'le_lccs' is now persistent and available to all users."
 
 init: wait-for-db ## Initialize the Open Data Cube database (run once after setup)
 	@$(DC) --profile init run --rm jupyter datacube -v system init
