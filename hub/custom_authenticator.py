@@ -42,7 +42,23 @@ class CustomSignUpHandler(SignUpHandler):
             )
             self.finish(html)
         else:
-            # User is in allowed list or no restrictions, proceed with normal signup
+            # Enforce that a password is provided (default=None avoids Tornado 400 when field is absent)
+            # NativeAuthenticator uses 'signup_password', not 'password', to avoid browser autofill conflicts
+            password = self.get_body_argument("signup_password", default=None, strip=False)
+            if not password:
+                html = await self.render_template(
+                    "signup.html",
+                    ask_email=self.authenticator.ask_email_on_signup,
+                    two_factor_auth=self.authenticator.allow_2fa,
+                    recaptcha_key=self.authenticator.recaptcha_key,
+                    tos=self.authenticator.tos,
+                    result_message="A password is required. Please enter a password before signing up.",
+                    alert="alert-danger",
+                )
+                self.finish(html)
+                return
+
+            # User is in allowed list and provided a password, proceed with normal signup
             await super().post()
 
 
