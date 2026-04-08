@@ -6,7 +6,7 @@
 # Used by jupyter, jupyterhub, and explorer services to connect to PostgreSQL
 x-odc-db-env: &odc-db-env
   POSTGRES_HOSTNAME: ${POSTGRES_HOSTNAME}
-  POSTGRES_PORT: ${POSTGRES_PORT}
+  POSTGRES_PORT: 5432
   POSTGRES_USER: ${POSTGRES_USER}
   POSTGRES_PASS: ${POSTGRES_PASS}
   POSTGRES_DBNAME: ${POSTGRES_DBNAME}
@@ -51,14 +51,14 @@ services:
       - ./data/pg:/var/lib/postgresql/
       - ./hub/postgres-init:/docker-entrypoint-initdb.d/
     healthcheck:
-      test: [ "CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p ${POSTGRES_PORT}" ]
+      test: [ "CMD-SHELL", "PGPASSWORD=${POSTGRES_PASS} pg_isready -h 127.0.0.1 -U ${POSTGRES_USER} -d ${POSTGRES_DBNAME} -p 5432" ]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 10s
     restart: unless-stopped
     ports:
-      - 5432:${POSTGRES_PORT}
+      - ${POSTGRES_PORT}:5432
     networks:
       - backend
 
@@ -74,7 +74,7 @@ services:
       # ODC database connection (using YAML anchor)
       <<: *odc-db-env
       # Additional environment variables
-      ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${POSTGRES_DBNAME}
+      ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:5432/${POSTGRES_DBNAME}
       AWS_NO_SIGN_REQUEST: "true"
     depends_on:
       postgres:
@@ -161,8 +161,8 @@ services:
       # ODC configuration
       ODC_DEFAULT_INDEX_DRIVER: postgres
       ODC_POSTGIS_INDEX_DRIVER: postgis
-      ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${POSTGRES_DBNAME}
-      ODC_POSTGIS_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:${POSTGRES_PORT}/${POSTGRES_DBNAME}
+      ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:5432/${POSTGRES_DBNAME}
+      ODC_POSTGIS_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:5432/${POSTGRES_DBNAME}
       # Flask configuration
       FLASK_ENV: development
       FLASK_APP: cubedash
