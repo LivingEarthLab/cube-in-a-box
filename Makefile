@@ -87,6 +87,8 @@ clean: ## Stop everything and remove containers, volumes, and built images
 	@$(DC) --profile init down --rmi all -v --remove-orphans
 
 down: ## Stop the running services (keeps your data and images)
+	@# Remove spawned user containers so recreated networks don't leave them orphaned
+	@docker ps -aq --filter "name=^jupyter-" | xargs -r docker rm -f
 	@$(DC) down --remove-orphans
 
 help: ## Show available commands
