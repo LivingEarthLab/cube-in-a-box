@@ -217,6 +217,7 @@ product: ## Load product definitions into the database (describes available data
 
 pull: ## Download all service images (recommended before first run in prod mode)
 	@$(DC) pull
+	@$(DC) --profile init pull jupyter
 
 purge-data: down ## Delete local data in ./data. Irreversible; requires CONFIRM=1
 	@echo "This will delete:"
