@@ -3,7 +3,7 @@
 FROM ghcr.io/livingearthlab/datacube-explorer:3.1.5@sha256:d2f17dba4a7b956217d8abeb48ebec3c420f205e939ecc74160f61fed5a9cfed AS runtime
 
 LABEL org.opencontainers.image.source="https://github.com/LivingEarthLab/cube-in-a-box" \
-    org.opencontainers.image.description="Datacube Explorer with planetary-computer support" \
+    org.opencontainers.image.description="Datacube Explorer with Planetary Computer and CDSE support" \
     org.opencontainers.image.licenses="Apache-2.0"
 
 # Bring a real uv binary (the base image may have a 0-byte uv in deployment builds)
@@ -20,10 +20,11 @@ COPY --from=uv /uv /uvx /usr/local/bin/
 
 # Install additional dependency into the /app environment
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install "planetary-computer"
+    uv pip install "planetary-computer" "boto3"
 
-COPY ./cubedash/_utils.py /app/lib/python3.12/site-packages/cubedash/_utils.py
-COPY ./cubedash/_api.py /app/lib/python3.12/site-packages/cubedash/_api.py
+COPY datacube-explorer/cubedash/_utils.py /app/lib/python3.12/site-packages/cubedash/_utils.py
+COPY datacube-explorer/cubedash/_api.py /app/lib/python3.12/site-packages/cubedash/_api.py
+COPY shared/notebooks_demo/utils/le_cdse_s3.py /app/lib/python3.12/site-packages/cdse_s3.py
 
 # Final image: keep base entrypoint/CMD; only ship the updated /app environment
 FROM runtime

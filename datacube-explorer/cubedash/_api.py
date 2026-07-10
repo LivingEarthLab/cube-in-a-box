@@ -1,9 +1,10 @@
 from datetime import date, datetime
+import os
 from zoneinfo import ZoneInfo
 
 import flask
 import structlog
-from flask import Blueprint, abort, request, send_from_directory
+from flask import Blueprint, Response, abort, request, send_from_directory, stream_with_context
 
 from cubedash import _utils
 
@@ -136,3 +137,47 @@ def dataset_timeline(
 @bp.route("/data/<path:filename>")
 def data_file(filename):
     return send_from_directory("/local_data", filename)
+
+
+@bp.route("/cdse/<path:object_key>")
+def cdse_file(object_key):
+    # Require a valid, unexpired, key-bound token before touching credentials.
+    # Fails closed: unsigned/tampered/expired/mismatched -> 403.
+    from cdse_s3 import verify_token
+
+    if not verify_token(object_key, request.args.get("sig")):
+        abort(403, "Invalid or expired CDSE proxy token")
+
+    # Lazy imports so a missing boto3/botocore breaks only this route.
+    import boto3
+    from botocore.client import Config
+    from botocore.exceptions import ClientError
+
+    endpoint = os.environ.get("AWS_S3_ENDPOINT", "https://eodata.dataspace.copernicus.eu")
+    if not endpoint.startswith("http"):
+        endpoint = f"https://{endpoint}"
+
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID", ""),
+        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
+        region_name="default",
+        config=Config(signature_version="s3v4"),
+    )
+    try:
+        obj = s3.get_object(Bucket="eodata", Key=object_key)
+    except ClientError as e:
+        _LOG.warning("cdse_proxy_get_failed", key=object_key, error=str(e))
+        abort(404, f"CDSE object not accessible: {object_key}")
+
+    filename = object_key.rsplit("/", 1)[-1]
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    if "ContentLength" in obj:
+        headers["Content-Length"] = str(obj["ContentLength"])
+
+    return Response(
+        stream_with_context(obj["Body"].iter_chunks(chunk_size=1024 * 1024)),
+        content_type=obj.get("ContentType", "application/octet-stream"),
+        headers=headers,
+    )

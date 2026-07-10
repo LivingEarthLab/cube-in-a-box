@@ -31,7 +31,7 @@ All the developments have made possible thanks to the financial support of the E
   - `shared/`: Read-only shared folder for all users.
 - `docs/`: Built documentation (Quarto).
 - `quarto/`: Source files for documentation.
-- `products/`: ODC product definitions.
+- `config/`: STAC indexation preset (`indexation/default.yaml`) and ODC product definitions (`products/pc/`, `products/cop/`).
 
 ## How to use:
 
@@ -145,7 +145,7 @@ This repository uses environment variables to configure the local domain, databa
 | Variable              | Required | Default (as provided)  | Example                    | Description                                                   |
 | --------------------- | -------: | ---------------------- | -------------------------- | ------------------------------------------------------------- |
 | `DOMAIN`              |      Yes | `localhost`            | `localhost`                | Hostname used to access the web endpoints (Jupyter/Explorer). |
-| `IMAGE_VERSION`       |      Yes | `20260211`             | `20260211`                 | Version of the images to use.                                 |
+| `IMAGE_VERSION`       |      Yes | `20260709`             | `20260709`                 | Version of the images to use.                                 |
 | `POSTGRES_HOSTNAME`   |      Yes | `postgres`             | `postgres`                 | Hostname used to access the PostgreSQL database.              |
 | `POSTGRES_PORT`       |      Yes | `5432`                 | `5432`                     | Port used to access the PostgreSQL database.                  |
 | `POSTGRES_DBNAME`     |      Yes | `opendatacube`         | `opendatacube`             | PostgreSQL database name used by Open Data Cube.              |
@@ -153,6 +153,11 @@ This repository uses environment variables to configure the local domain, databa
 | `POSTGRES_PASS`       |      Yes | `opendatacubepassword` | `a-strong-password`        | PostgreSQL password for the Open Data Cube database.          |
 | `JUPYTERHUB_ADMINS`   |      Yes | `admin`                | `admin,bruno`              | Comma-separated list of JupyterHub admin usernames.           |
 | `JUPYTERHUB_USERS`    |       No | `guest`                | `guest,alice,bob`          | Comma-separated list of authorized non-admin usernames.       |
+| `CDSE_S3_ACCESS_KEY`  |       No | *(empty)*              | *(from dataspace.copernicus.eu)* | Copernicus Data Space S3 access key (required for CDSE-indexed products). |
+| `CDSE_S3_SECRET_KEY`  |       No | *(empty)*              | *(from dataspace.copernicus.eu)* | Copernicus Data Space S3 secret key.                          |
+| `CDSE_S3_ENDPOINT`    |       No | `https://eodata.dataspace.copernicus.eu` | same | CDSE S3 API endpoint. |
+
+Explorer CDSE download links are signed automatically inside the Explorer container; there is no proxy secret to set in `.env`.
 
 ##### Advanced Variables (for Docker-out-of-Docker)
 
@@ -160,7 +165,7 @@ These variables are automatically set in the environment but can be overridden i
 
 | Variable                  | Description                                                                 |
 | ------------------------- | --------------------------------------------------------------------------- |
-| `HOST_PRODUCTS_DIR`       | Host path to the `./products` directory.                                    |
+| `HOST_PRODUCTS_DIR`       | Host path to the `./config/products` directory.                             |
 | `HOST_DATA_DIR`           | Host path to the `./data/local_data` directory.                             |
 | `HOST_DISTRIBUTED_CONFIG` | Host path to the `distributed.yaml` file.                                   |
 | `HOST_SHARED_STATIC`      | Host path to the `./shared` directory.                                      |
@@ -297,10 +302,10 @@ make help
 | `make build-nocache`   | Build the images locally from scratch                                                      |
 | `make pull`            | Download all service images (recommended before first run in prod mode)                    |
 | **Data & Indexing**    |                                                                                            |
-| `make product`         | Load product definitions into the database (describes available datasets)                  |
-| `make index`           | Index example data for the selected area/time (uses BBOX and DATETIME)                     |
-| `make index-parallel`  | Index data using the automated script (recommended)                                        |
-| `make index-serie`     | Index data step-by-step (older method; slower)                                             |
+| `make product`         | Load ODC product definitions from `INDEX_CONFIG` into the database |
+| `make index`           | Index products from `INDEX_CONFIG` (parallel; uses `BBOX`, `DATETIME`) |
+| `make index-parallel`  | Same as `make index` |
+| `make index-serie`     | Index products from `INDEX_CONFIG` sequentially |
 | `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                                |
 | **Maintenance**        |                                                                                            |
 | `make backup`          | Create a backup of the PostgreSQL database                                                 |

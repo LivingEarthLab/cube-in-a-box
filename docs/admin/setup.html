@@ -352,6 +352,24 @@ Table&nbsp;4.1: Required environment variables
 <td><code>guest,alice,bob</code></td>
 <td>Comma-separated list of authorized non-admin usernames.</td>
 </tr>
+<tr class="even">
+<td><code>CDSE_S3_ACCESS_KEY</code></td>
+<td style="text-align: right;">No</td>
+<td><em>(empty)</em></td>
+<td>Copernicus Data Space S3 access key (required for CDSE-indexed products).</td>
+</tr>
+<tr class="odd">
+<td><code>CDSE_S3_SECRET_KEY</code></td>
+<td style="text-align: right;">No</td>
+<td><em>(empty)</em></td>
+<td>Copernicus Data Space S3 secret key.</td>
+</tr>
+<tr class="even">
+<td><code>CDSE_S3_ENDPOINT</code></td>
+<td style="text-align: right;">No</td>
+<td><code>https://eodata.dataspace.copernicus.eu</code></td>
+<td>CDSE S3 API endpoint.</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -393,11 +411,43 @@ Table&nbsp;4.2: <code>make setup</code> parameters
 <td style="text-align: left;"><code>start/end</code></td>
 <td style="text-align: left;">Temporal extent. Use <code>YYYY-MM-DD</code> format (e.g., <code>2020-01-01/2020-12-31</code>).</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;"><strong><code>INDEX_CONFIG</code></strong></td>
+<td style="text-align: left;">path to YAML</td>
+<td style="text-align: left;">STAC indexation preset (default: <code>config/indexation/default.yaml</code>).</td>
+</tr>
 </tbody>
 </table>
 </div>
 </figure>
 </div></li>
+</ul>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>Copernicus Data Space products
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>config/indexation/default.yaml</code> indexes Sentinel-2 (<code>s2_l2a_cdse</code>) and CLCplus from <a href="https://stac.dataspace.copernicus.eu/v1/">Copernicus Data Space STAC</a>, plus Planetary Computer products (including <code>s2_l2a_pc</code>).</p>
+<ul>
+<li><p>Set <code>CDSE_S3_ACCESS_KEY</code> and <code>CDSE_S3_SECRET_KEY</code> in <code>.env</code> (<a href="https://documentation.dataspace.copernicus.eu/APIs/S3.html">S3 credentials</a>). These keys are required for <strong>indexing</strong>, <strong>Explorer downloads</strong>, and <strong>notebook access</strong> to CDSE products. Explorer download links are signed automatically (no proxy secret to configure); notebooks read CDSE data directly via <code>s3://</code> and do not use that signing path.</p></li>
+<li><p><strong>S3 endpoint pinning:</strong> when <code>CDSE_S3_ACCESS_KEY</code>/<code>CDSE_S3_SECRET_KEY</code> are set, notebook and Explorer S3 access is pinned to the CDSE endpoint (<code>AWS_S3_ENDPOINT=eodata…</code>, <code>AWS_VIRTUAL_HOSTING=FALSE</code>). Generic <code>s3://</code> reads from other providers (e.g.&nbsp;AWS-hosted buckets) will not work in that configuration; Planetary Computer assets are unaffected (served over HTTPS with SAS tokens).</p></li>
+<li><p>CLCplus is <strong>Europe-only</strong> — use a European <code>BBOX</code> (e.g.&nbsp;Switzerland below).</p></li>
+<li><p>In notebooks, use <code>get_patch_url</code> from <code>utils.le_dc</code> (CDSE access uses <code>s3://</code> paths with GDAL header auth via <code>utils/le_cdse_s3.py</code>; presigned URLs are not supported by CDSE):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> utils.le_dc <span class="im">import</span> get_patch_url</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>ds <span class="op">=</span> dc.load(..., patch_url<span class="op">=</span>get_patch_url(dc, product))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Copying <code>notebooks_demo/</code> to another location includes <code>utils/le_cdse_s3.py</code>; no separate signing module is required. Ensure <code>CDSE_S3_ACCESS_KEY</code> and <code>CDSE_S3_SECRET_KEY</code> are set, then restart your Jupyter server so Dask workers inherit the credentials.</p></li>
+</ul>
+</div>
+</div>
+<ul>
+<li><p>European setup example (CLCplus):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 </ul>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
@@ -409,7 +459,7 @@ Table&nbsp;4.2: <code>make setup</code> parameters
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>These parameters can also be used individually with <code>make index</code> to add more data later without running a full setup (see <a href="./operations.html#target-reference">Target reference</a> Table).</p>
+<p><code>make product</code> and <code>make index</code> both use <code>INDEX_CONFIG</code> (default: <code>config/indexation/default.yaml</code>). Only products referenced via <code>product_file</code> in that config are registered and indexed. Sentinel-2 L2A is split into <code>s2_l2a_pc</code> (Planetary Computer) and <code>s2_l2a_cdse</code> (CDSE); other ODC names are unchanged (<code>nasadem</code>, etc.). Source is recorded in each product YAML under <code>metadata.product.source</code>.</p>
 </div>
 </div>
 

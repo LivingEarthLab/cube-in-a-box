@@ -1,0 +1,74 @@
+# Default indexation preset — Planetary Computer + Copernicus Data Space.
+# CLCplus is Europe-only — use a European BBOX for meaningful results.
+name: default
+parallelism: 4
+
+catalogs:
+  pc:
+    href: https://planetarycomputer.microsoft.com/api/stac/v1/
+  cdse:
+    href: https://stac.dataspace.copernicus.eu/v1/
+    auth: cdse_s3
+
+products:
+  - id: sentinel-2-l2a-pc
+    catalog: pc
+    collection: sentinel-2-l2a
+    product_file: products/pc/s2_l2a.odc-product.yaml
+    datetime: true
+
+  - id: sentinel-2-l2a-cdse
+    catalog: cdse
+    collection: sentinel-2-l2a
+    product_file: products/cop/s2_l2a.odc-product.yaml
+    datetime: true
+
+  - id: clms-clcplus-europe
+    catalog: cdse
+    collection: clms_clcplus_lulucf-instance_europe_100m_yearly_v1
+    product_file: products/cop/clms_clcplus_europe_100m.odc-product.yaml
+    optional: true
+
+  - id: io-lulc-annual-v02
+    catalog: pc
+    collection: io-lulc-annual-v02
+    product_file: products/pc/io_lulc_annual_v02.odc-product.yaml
+    optional: true
+
+  - id: nasadem
+    catalog: pc
+    collection: nasadem
+    product_file: products/pc/nasadem.odc-product.yaml
+
+  - id: ls45_c2l2_sp
+    catalog: pc
+    collection: landsat-c2-l2
+    product_file: products/pc/ls45_c2l2_sp.odc-product.yaml
+    datetime: true
+    query: '{"platform":{"in":["landsat-4","landsat-5"]}}'
+
+  - id: ls7_c2l2_sp
+    catalog: pc
+    collection: landsat-c2-l2
+    product_file: products/pc/ls7_c2l2_sp.odc-product.yaml
+    datetime: true
+    query: '{"platform":{"in":["landsat-7"]}}'
+
+  - id: ls89_c2l2_sp
+    catalog: pc
+    collection: landsat-c2-l2
+    product_file: products/pc/ls89_c2l2_sp.odc-product.yaml
+    datetime: true
+    query: '{"platform":{"in":["landsat-8","landsat-9"]}}'
+
+  - id: sentinel-1-rtc
+    catalog: pc
+    collection: sentinel-1-rtc
+    product_file: products/pc/s1_rtc.odc-product.yaml
+    datetime: true
+
+  - id: esa-worldcover
+    catalog: pc
+    collection: esa-worldcover
+    product_file: products/pc/esa_worldcover.odc-product.yaml
+    optional: true

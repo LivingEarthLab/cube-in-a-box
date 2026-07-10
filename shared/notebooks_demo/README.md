@@ -1,6 +1,6 @@
 # Notebooks Demo
 
-This directory contains a collection of Jupyter notebooks demonstrating various functionalities, products and tools of the Cube in a Bix (CiaB).
+This directory contains a collection of Jupyter notebooks demonstrating various functionalities, products and tools of the Cube in a Box (CiaB).
 
 ## Overview
 
@@ -14,6 +14,7 @@ This directory contains a collection of Jupyter notebooks demonstrating various 
 
 | Notebook | Description | Key Modules/Tools |
 | :--- | :--- | :--- |
+| **[CLMS_CLCplus_Europe.ipynb](./CLMS_CLCplus_Europe.ipynb)** | Demonstrates loading and plotting CLMS CLCplus LULUCF Instance Europe 100 m. | `datacube`, `matplotlib` |
 | **[ESRI_Land_Cover.ipynb](./ESRI_Land_Cover.ipynb)** | Demonstrates loading and plotting ESRI Land Cover data. | `datacube`, `matplotlib` |
 | **[ESA_Worldcover.ipynb](./ESA_Worldcover.ipynb)** | Demonstrates loading and plotting ESA Worldcover data. | `datacube`, `matplotlib` |
 | **[Landsat_Collection_2_Level-2_Science_Products.ipynb](./Landsat_Collection_2_Level-2_Science_Products.ipynb)** | Covers processing Landsat C2 L2 products, including DN to SR conversion. | `datacube`, `dask` |
@@ -28,6 +29,14 @@ This directory contains a collection of Jupyter notebooks demonstrating various 
 | **[cogs_fs_indexation.ipynb](./cogs_fs_indexation.ipynb)** | ADMIN ONLY! Prepare metadata and index existing COGs as a new product. | `add_product`, `add_dataset` |
 | **[STAC_to_fs.ipynb](./STAC_to_fs.ipynb)** | ADMIN ONLY! Demonstrates converting STAC metadata to a filesystem structure for local indexing. | `pystac`, `odc.geo` |
 | **[Test_fs_indexation.ipynb](./Test_fs_indexation.ipynb)** | Verification and exploration of data recently indexed into the datacube from local storage. | `datacube`, `ipyleaflet` |
+
+## Utils
+
+The [`utils/`](./utils/) directory contains shared Python helpers imported by the demo notebooks (`le_dc`, `le_mapping`, `deafrica_plotting`, `le_cdse_s3`, etc.).
+
+- **Admins:** edit files on the host at `./shared/notebooks_demo/utils/`. Changes are available to all users via the JupyterHub shared mount (no image rebuild). Notebook helpers such as `le_dc` / `le_cdse_s3` update live; the Explorer image still needs a rebuild if you change the copy baked into Explorer (`cdse_s3`).
+- **Users:** when copying this folder to your workspace (`cp -r /notebooks/shared/notebooks_demo ~/my_notebooks_demo`), `utils/` is included automatically.
+- **CDSE products:** use `get_patch_url` from `utils.le_dc` with `dc.load(..., patch_url=...)`. Requires `CDSE_S3_ACCESS_KEY` / `CDSE_S3_SECRET_KEY` in `.env` (set by the admin).
 
 ## Quick Start
 

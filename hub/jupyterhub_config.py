@@ -81,17 +81,32 @@ c.DockerSpawner.remove = True
 c.DockerSpawner.debug = True
 
 # Environment variables for the spawned container
-c.DockerSpawner.environment = {
+_spawner_env = {
     "ODC_DEFAULT_DB_HOSTNAME": os.environ["POSTGRES_HOSTNAME"],
     "ODC_DEFAULT_DB_PORT": os.environ["POSTGRES_PORT"],
     "ODC_DEFAULT_DB_USERNAME": os.environ["POSTGRES_USER"],
     "ODC_DEFAULT_DB_PASSWORD": os.environ["POSTGRES_PASS"],
     "ODC_DEFAULT_DB_DATABASE": os.environ["POSTGRES_DBNAME"],
-    "AWS_NO_SIGN_REQUEST": "true",
+    "CDSE_S3_ACCESS_KEY": os.environ.get("CDSE_S3_ACCESS_KEY", ""),
+    "CDSE_S3_SECRET_KEY": os.environ.get("CDSE_S3_SECRET_KEY", ""),
+    "AWS_ACCESS_KEY_ID": os.environ.get("CDSE_S3_ACCESS_KEY", ""),
+    "AWS_SECRET_ACCESS_KEY": os.environ.get("CDSE_S3_SECRET_KEY", ""),
+    "AWS_S3_ENDPOINT": os.environ.get(
+        "CDSE_S3_ENDPOINT", "https://eodata.dataspace.copernicus.eu"
+    ),
     "STAC_API_URL": "https://explorer.sandbox.dea.ga.gov.au/stac/",
     "BOKEH_RESOURCES": "inline",
     "DASK_DISTRIBUTED__DASHBOARD__LINK": "/jupyter/user/{JUPYTERHUB_USER}/proxy/{port}/status",
 }
+# Planetary Computer public assets use unsigned requests; CDSE needs credentials.
+if not os.environ.get("CDSE_S3_ACCESS_KEY"):
+    _spawner_env["AWS_NO_SIGN_REQUEST"] = "true"
+else:
+    _spawner_env["AWS_VIRTUAL_HOSTING"] = "FALSE"
+    _spawner_env["AWS_HTTPS"] = "YES"
+    _spawner_env["GDAL_HTTP_UNSAFESSL"] = "YES"
+
+c.DockerSpawner.environment = _spawner_env
 
 # Networking
 c.JupyterHub.hub_ip = "0.0.0.0"

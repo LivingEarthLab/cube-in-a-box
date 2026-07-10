@@ -233,6 +233,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#target-reference" id="toc-target-reference" class="nav-link active" data-scroll-target="#target-reference"><span class="header-section-number">6.1</span> Target reference (from <code>make help</code>)</a></li>
   <li><a href="#common-usage-patterns" id="toc-common-usage-patterns" class="nav-link" data-scroll-target="#common-usage-patterns"><span class="header-section-number">6.2</span> Common usage patterns</a></li>
+  <li><a href="#stac-indexation-configs" id="toc-stac-indexation-configs" class="nav-link" data-scroll-target="#stac-indexation-configs"><span class="header-section-number">6.3</span> STAC indexation configs</a></li>
   </ul>
 </nav>
     </div>
@@ -339,19 +340,19 @@ Table&nbsp;6.1: <code>make</code> target reference
 </tr>
 <tr class="odd">
 <td><code>make product</code></td>
-<td>Load product definitions into the database (describes available datasets)</td>
+<td>Load ODC product definitions from <code>INDEX_CONFIG</code> into the database</td>
 </tr>
 <tr class="even">
 <td><code>make index</code></td>
-<td>Index example data for the selected area/time (uses <code>BBOX</code> and <code>DATETIME</code>)</td>
+<td>Index products from <code>INDEX_CONFIG</code> (parallel; uses <code>BBOX</code>, <code>DATETIME</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>make index-parallel</code></td>
-<td>Index data using the automated script (recommended; faster)</td>
+<td>Same as <code>make index</code></td>
 </tr>
 <tr class="even">
 <td><code>make index-serie</code></td>
-<td>Index data step-by-step (older method; slower)</td>
+<td>Index products from <code>INDEX_CONFIG</code> sequentially (one at a time)</td>
 </tr>
 <tr class="odd">
 <td><code>make update-explorer</code></td>
@@ -431,6 +432,43 @@ Table&nbsp;6.1: <code>make</code> target reference
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># then check for any remaining resources</span></span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> ps <span class="at">-a</span> <span class="kw">&amp;&amp;</span> <span class="ex">docker</span> images <span class="at">-a</span> <span class="kw">&amp;&amp;</span> <span class="ex">docker</span> volume ls <span class="kw">&amp;&amp;</span> <span class="fu">ls</span> <span class="at">-la</span> ./data</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div></li>
 </ul>
+</section>
+<section id="stac-indexation-configs" class="level2" data-number="6.3">
+<h2 data-number="6.3" class="anchored" data-anchor-id="stac-indexation-configs"><span class="header-section-number">6.3</span> STAC indexation configs</h2>
+<p><code>make product</code> and <code>make index</code> both read the same <code>INDEX_CONFIG</code> YAML. Only products listed in that file are registered and indexed.</p>
+<p>Indexation presets live in <code>config/indexation/</code>. ODC product definitions live in <code>config/products/pc/</code> (Planetary Computer) and <code>config/products/cop/</code> (Copernicus CDSE), with <code>metadata.product.source</code> set in each YAML.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 26%">
+<col style="width: 39%">
+<col style="width: 34%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Config</th>
+<th>Source(s)</th>
+<th>Products</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>default.yaml</code> (default)</td>
+<td>Planetary Computer + CDSE</td>
+<td>11 products: <code>s2_l2a_pc</code>, <code>s2_l2a_cdse</code>, CLCplus (CDSE); S1 RTC, Landsat, NASADEM, ESA WorldCover, ESRI land cover (PC)</td>
+</tr>
+</tbody>
+</table>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Default (all products)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index BBOX=25,20,35,30 DATETIME=2021-12-01/2021-12-31</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Per-product timing report at the end</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index TIME_INDEX=1 BBOX=25,20,35,30 DATETIME=2021-12-01/2021-12-31</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># European BBOX recommended for CLCplus</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Sequential indexing</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index-serie</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 
 </section>

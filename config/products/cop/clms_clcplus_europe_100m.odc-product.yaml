@@ -1,0 +1,59 @@
+name: clms_clcplus_europe_100m
+description: CLMS CLCplus LULUCF Instance land cover for Europe at 100 m resolution
+  (yearly)
+metadata_type: eo3
+metadata:
+  product:
+    name: clms_clcplus_europe_100m
+    source: copernicus
+    stac_catalog: cdse
+measurements:
+- name: data
+  aliases:
+  - classification
+  - lulc
+  units: '1'
+  dtype: uint8
+  nodata: 255
+  flags_definition:
+    data:
+      bits:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      description: CLCplus LULUCF class
+      values:
+        11: s_burnt_areas
+        12: s_settlements
+        13: s_green_urban_areas
+        14: s_other_settlements
+        21: fl_burnt_areas
+        22: fl_transitional_woodland
+        23: fl_deciduous
+        24: fl_coniferous_evergreen
+        25: fl_other_forestland
+        31: cl_burnt_areas
+        32: cl_annual_crops
+        33: cl_perennial_crops
+        34: cl_other_cropland
+        41: gl_burnt_areas
+        42: gl_pastures
+        43: gl_shrubs
+        44: gl_natural_grassland
+        45: gl_other_grassland
+        51: wl_wetland_managed
+        52: wl_wetland_unmanaged
+        53: wl_water_managed
+        54: wl_water_unmanaged
+        55: wl_burnt_areas
+        61: ol_bare_soil_and_rocks
+        62: ol_permanent_snow_and_ice
+        63: ol_lichens_and_mosses
+        64: ol_other_otherland
+        254: unclassified_clouds
+        255: outside_area

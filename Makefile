@@ -11,7 +11,7 @@
 ##   make down      Stop the environment (keeps your local data)
 ##
 ## Data / indexing:
-##   make index     Load example data for the selected area/time (BBOX, DATETIME)
+##   make index     Load example data for the selected area/time (BBOX, DATETIME, INDEX_CONFIG, TIME_INDEX=1)
 ##
 ## Reset options (use with care):
 ##   make clean       Stop services and remove containers/volumes/images
@@ -21,9 +21,7 @@
 ##   export MODE=dev      # set dev mode for entire session, and then make *
 ##   unset MODE           # set dev mode to prod mode, and then make *
 
-.PHONY: backup build build-nocache clean down help index index-esa-worldcover index-io-lulc-annual-v02 \
-        index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp index-nasadem index-parallel \
-        index-sentinel-1-rtc index-sentinel-2-l2a index-serie init install-le logs product pull purge-data \
+.PHONY: backup build build-nocache clean down help index index-parallel index-serie init install-le logs product pull purge-data \
         purge-user purge-users release-push restore setup shell status up update-explorer wait-for-db \
         docs
 .DEFAULT_GOAL := help
@@ -42,6 +40,10 @@ CONFIRM ?= 0
 BBOX ?= 25,20,35,30
 # DATETIME=<start_date>/<end_date> e.g. 2021-06-01/2021-07-01
 DATETIME ?= 2021-12-01/2021-12-31
+
+# STAC indexation config (see config/indexation/)
+INDEX_CONFIG ?= config/indexation/default.yaml
+TIME_INDEX ?=
 
 # Current date
 DATE_YYYYMMDD := $(shell date +%Y%m%d)
@@ -106,88 +108,16 @@ else
 	@echo "\033[90mTip: For dev mode with local builds: export MODE=dev or use MODE=dev\033[0m"
 endif
 
-index: index-parallel ## Index example data for the selected area/time (uses BBOX and DATETIME)
+index: index-parallel ## Index products from INDEX_CONFIG (parallel; uses BBOX, DATETIME)
 	@true
 
-index-esa-worldcover: ## Index ESA WorldCover (non-fatal if empty)
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='esa-worldcover'" || true
+index-parallel: ## Index products from INDEX_CONFIG (parallel)
+	@INDEX_CONFIG=$(INDEX_CONFIG) BBOX='$(BBOX)' DATETIME='$(DATETIME)' MODE=$(MODE) \
+		TIME_INDEX=$(TIME_INDEX) bash index-from-config.sh
 
-index-io-lulc-annual-v02: # Index IO LULC Annual v02 (non-fatal if empty)
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='io-lulc-annual-v02'" || true
-
-index-ls45_c2l2_sp: # Index Landsat 4/5 Collection 2 L2
-	@$(DC) --profile init run --rm jupyter bash -lc \
-        "stac-to-dc \
-            --bbox='$(BBOX)' \
-            --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-            --collections='landsat-c2-l2' \
-            --datetime='$(DATETIME)' \
-            --options='query={\"platform\":{\"in\":[\"landsat-4\",\"landsat-5\"]}}' \
-            --rename-product='ls45_c2l2_sp'"
-
-index-ls7_c2l2_sp: # Index Landsat 7 Collection 2 L2
-	@$(DC) --profile init run --rm jupyter bash -lc \
-        "stac-to-dc \
-            --bbox='$(BBOX)' \
-            --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-            --collections='landsat-c2-l2' \
-            --datetime='$(DATETIME)' \
-            --options='query={\"platform\":{\"in\":[\"landsat-7\"]}}' \
-            --rename-product='ls7_c2l2_sp'"
-
-index-ls89_c2l2_sp: # Index Landsat 8/9 Collection 2 L2
-	@$(DC) --profile init run --rm jupyter bash -lc \
-        "stac-to-dc \
-            --bbox='$(BBOX)' \
-            --catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-            --collections='landsat-c2-l2' \
-            --datetime='$(DATETIME)' \
-            --options='query={\"platform\":{\"in\":[\"landsat-8\",\"landsat-9\"]}}' \
-            --rename-product='ls89_c2l2_sp'"
-
-index-nasadem: # Index NASADEM
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='nasadem'"
-
-index-parallel: ## Index data using the automated script (recommended)
-ifeq ($(MODE),dev)
-	@MODE=dev bash index-parallel.sh
-else
-	@bash index-parallel.sh
-endif
-
-index-sentinel-1-rtc: # Index Sentinel-1 RTC
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='sentinel-1-rtc' \
-			--datetime='$(DATETIME)'"
-
-index-sentinel-2-l2a: # Index Sentinel-2 L2A
-	@$(DC) --profile init run --rm jupyter bash -lc \
-		"stac-to-dc \
-			--bbox='$(BBOX)' \
-			--catalog-href='https://planetarycomputer.microsoft.com/api/stac/v1/' \
-			--collections='sentinel-2-l2a' \
-			--datetime='$(DATETIME)' \
-			--rename-product='s2_l2a'"
-
-index-serie: ## Index data step-by-step (older method; slower)
-	@$(MAKE) index-sentinel-2-l2a index-io-lulc-annual-v02 index-nasadem \
-	         index-ls45_c2l2_sp index-ls7_c2l2_sp index-ls89_c2l2_sp \
-	         index-sentinel-1-rtc index-esa-worldcover
+index-serie: ## Index products from INDEX_CONFIG (sequential)
+	@INDEX_CONFIG=$(INDEX_CONFIG) BBOX='$(BBOX)' DATETIME='$(DATETIME)' MODE=$(MODE) \
+		TIME_INDEX=$(TIME_INDEX) PARALLELISM=1 bash index-from-config.sh
 
 install-le: ## Install the LivingEarth LCCS package into the shared local_data volume
 	@echo "Installing livingearth_lccs into shared local_data volume..."
@@ -212,8 +142,8 @@ docs: ## Render Quarto documentation (Admin and User guides)
 	@mkdir -p docs/user
 	@cp -r quarto/user/_book/* docs/user/
 
-product: ## Load product definitions into the database (describes available datasets)
-	@$(DC) --profile init run --rm jupyter bash -lc "datacube product add /conf/*.odc-product.yaml"
+product: ## Load ODC product definitions from INDEX_CONFIG into the database
+	@INDEX_CONFIG=$(INDEX_CONFIG) MODE=$(MODE) bash product-from-config.sh
 
 pull: ## Download all service images (recommended before first run in prod mode)
 	@$(DC) pull

@@ -41,8 +41,8 @@ target "jupyter_dev" {
 }
 
 target "explorer_dev" {
-  context    = "datacube-explorer"
-  dockerfile = "Dockerfile"
+  context    = "."
+  dockerfile = "datacube-explorer/Dockerfile"
   tags       = ["cube-in-a-box-explorer:dev"]
   output     = ["type=docker"]
 }
@@ -64,7 +64,7 @@ target "jupyter" {
 
 target "explorer" {
   inherits   = ["_common_release"]
-  context    = "datacube-explorer"
-  dockerfile = "Dockerfile"
+  context    = "."
+  dockerfile = "datacube-explorer/Dockerfile"
   tags       = ["${REGISTRY}/cube-in-a-box-explorer:${TAG}"]
 }

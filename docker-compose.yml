@@ -76,11 +76,15 @@ services:
       # Additional environment variables
       ODC_DEFAULT_DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASS}@${POSTGRES_HOSTNAME}:5432/${POSTGRES_DBNAME}
       AWS_NO_SIGN_REQUEST: "true"
+      CDSE_S3_ACCESS_KEY: ${CDSE_S3_ACCESS_KEY:-}
+      CDSE_S3_SECRET_KEY: ${CDSE_S3_SECRET_KEY:-}
+      AWS_ACCESS_KEY_ID: ${CDSE_S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${CDSE_S3_SECRET_KEY:-}
+      AWS_S3_ENDPOINT: ${CDSE_S3_ENDPOINT:-https://eodata.dataspace.copernicus.eu}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
-      - ./products:/conf
       - ./data/local_data:/local_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
     healthcheck:
@@ -120,12 +124,15 @@ services:
       DOCKER_NETWORK_NAME: ${COMPOSE_PROJECT_NAME}-backend
       # HOST_* variables: Required for Docker-out-of-Docker pattern
       # JupyterHub spawns user containers and needs to know the HOST paths to mount them
-      HOST_PRODUCTS_DIR: ${PWD}/products
+      HOST_PRODUCTS_DIR: ${PWD}/config/products
       HOST_DATA_DIR: ${PWD}/data/local_data
       HOST_DISTRIBUTED_CONFIG: ${PWD}/distributed.yaml
       HOST_SHARED_STATIC: ${PWD}/shared
       HOST_USER_FOLDERS: ${PWD}/data/shared
       HOST_SCRIPTS_DIR: ${PWD}/scripts
+      CDSE_S3_ACCESS_KEY: ${CDSE_S3_ACCESS_KEY:-}
+      CDSE_S3_SECRET_KEY: ${CDSE_S3_SECRET_KEY:-}
+      CDSE_S3_ENDPOINT: ${CDSE_S3_ENDPOINT:-https://eodata.dataspace.copernicus.eu}
     depends_on:
       postgres:
         condition: service_healthy
@@ -170,6 +177,11 @@ services:
       CUBEDASH_DEFAULT_TIMEZONE: Europe/Zurich
       SCRIPT_NAME: /explorer
       CUBEDASH_BASE_URL: /explorer
+      CDSE_S3_ACCESS_KEY: ${CDSE_S3_ACCESS_KEY:-}
+      CDSE_S3_SECRET_KEY: ${CDSE_S3_SECRET_KEY:-}
+      AWS_ACCESS_KEY_ID: ${CDSE_S3_ACCESS_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${CDSE_S3_SECRET_KEY:-}
+      AWS_S3_ENDPOINT: ${CDSE_S3_ENDPOINT:-https://eodata.dataspace.copernicus.eu}
     depends_on:
       postgres:
         condition: service_healthy

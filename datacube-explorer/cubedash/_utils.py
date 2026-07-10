@@ -40,6 +40,7 @@ from shapely.geometry import Polygon, shape
 from sqlalchemy import TIMESTAMP, func
 from werkzeug.datastructures import MultiDict
 
+from cdse_s3 import extract_key, proxy_path as cdse_proxy_path
 from planetary_computer import sign
 
 if TYPE_CHECKING:
@@ -165,6 +166,17 @@ def get_dataset_file_offsets(dataset: Dataset) -> dict[str, str]:
         # partial, local or other dataset without accessories
         pass
 
+    # Route Copernicus (CDSE) eodata assets through the local Explorer proxy
+    # (short-lived signed links; signing secret is auto-generated in-process).
+    try:
+        base_uri = getattr(dataset, "location", None) or getattr(dataset, "uri", None) or ""
+        for name, path in uri_list.items():
+            full = path if path.startswith("s3://") else urljoin(base_uri, path)
+            if extract_key(full):
+                uri_list[name] = cdse_proxy_path(full)
+    except (AttributeError, KeyError, TypeError):
+        pass
+
     return uri_list
 
 
@@ -172,6 +184,10 @@ def as_resolved_remote_url(location: str | None, offset: str) -> str:
     """
     Convert a dataset location and file offset to a full remote URL.
     """
+    # Local explorer proxy paths must remain local and must not be resolved
+    # against remote dataset/stac locations.
+    if offset.startswith("/explorer/"):
+        return offset
     return as_external_url(
         urljoin(location or "", offset),
         flask.current_app.config.get("CUBEDASH_DATA_S3_REGION", "ap-southeast-2"),

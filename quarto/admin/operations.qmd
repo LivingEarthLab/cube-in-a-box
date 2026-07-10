@@ -26,10 +26,10 @@ make help
 | `make build-nocache`   | Build the images locally from scratch                                                      |
 | `make pull`            | Download all service images (recommended before first run in `prod` mode)                  |
 | **Data & Indexing**    |                                                                                            |
-| `make product`         | Load product definitions into the database (describes available datasets)                  |
-| `make index`           | Index example data for the selected area/time (uses `BBOX` and `DATETIME`)                 |
-| `make index-parallel`  | Index data using the automated script (recommended; faster)                                        |
-| `make index-serie`     | Index data step-by-step (older method; slower)                                             |
+| `make product`         | Load ODC product definitions from `INDEX_CONFIG` into the database |
+| `make index`           | Index products from `INDEX_CONFIG` (parallel; uses `BBOX`, `DATETIME`) |
+| `make index-parallel`  | Same as `make index` |
+| `make index-serie`     | Index products from `INDEX_CONFIG` sequentially (one at a time) |
 | `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                                |
 | **Maintenance**        |                                                                                            |
 | `make backup`          | Create a backup of the PostgreSQL database                                                 |
@@ -85,4 +85,28 @@ make help
   # then check for any remaining resources
   docker ps -a && docker images -a && docker volume ls && ls -la ./data
   ```
+
+## STAC indexation configs
+
+`make product` and `make index` both read the same `INDEX_CONFIG` YAML. Only products listed in that file are registered and indexed.
+
+Indexation presets live in `config/indexation/`. ODC product definitions live in `config/products/pc/` (Planetary Computer) and `config/products/cop/` (Copernicus CDSE), with `metadata.product.source` set in each YAML.
+
+| Config | Source(s) | Products |
+| ------ | --------- | -------- |
+| `default.yaml` (default) | Planetary Computer + CDSE | 11 products: `s2_l2a_pc`, `s2_l2a_cdse`, CLCplus (CDSE); S1 RTC, Landsat, NASADEM, ESA WorldCover, ESRI land cover (PC) |
+
+```bash
+# Default (all products)
+make index BBOX=25,20,35,30 DATETIME=2021-12-01/2021-12-31
+
+# Per-product timing report at the end
+make index TIME_INDEX=1 BBOX=25,20,35,30 DATETIME=2021-12-01/2021-12-31
+
+# European BBOX recommended for CLCplus
+make index BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
+
+# Sequential indexing
+make index-serie
+```
 

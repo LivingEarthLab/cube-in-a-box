@@ -13,17 +13,9 @@ backups/
 *.swp
 *.swo
 
-# Jupyter / notebooks
+# Jupyter / local experiments
 .ipynb_checkpoints/
-notebooks/.ipynb_checkpoints/
-notebooks/.datacube.conf
-notebooks/.config/
-notebooks/.local/
-notebooks/.cache/
-notebooks/.ipython/
-notebooks/.jupyter/
-notebooks/.python_history
-notebooks/.bash_history
+test_stac/
 
 # Python caches
 __pycache__/

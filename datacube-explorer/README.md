@@ -28,7 +28,7 @@ git.unepgrid.ch/nostradamus/explorer:3.1.5
 ## Downstream Usage
 
 This image serves as the base image for a customized version of Datacube Explorer used within the *Cube in a Box (CiaB)* framework.
-This implementation includes additional adaptations to support integration with the **Microsoft Planetary Computer**; these adaptations are maintained in this repository.
+This implementation includes adaptations for the **Microsoft Planetary Computer** and **Copernicus Data Space Ecosystem (CDSE)**; these adaptations are maintained in this repository.
 
 The image is published at:
 
@@ -38,12 +38,16 @@ git.unepgrid.ch/nostradamus/explorer:3.1.5
 
 ### Customizations and Patches
 
-This directory contains two specific patches to the standard Explorer codebase to support the **Cube in a Box (CiaB)** environment:
+This directory contains patches to the standard Explorer codebase to support the **Cube in a Box (CiaB)** environment:
 
-1.  **`cubedash/_api.py`**: Adds a new `/api/data/<filename>` endpoint. This allows the Explorer to serve files directly from the `/local_data` directory, which is bridged from the host system.
+1.  **`cubedash/_api.py`**:
+    -   **`/api/data/<filename>`**: Serves files from the `/local_data` directory bridged from the host.
+    -   **`/api/cdse/<object_key>`**: Streams CDSE `eodata` objects through a short-lived signed download proxy (requires `CDSE_S3_*` credentials on the Explorer service). Signing uses an internal secret auto-generated in the container when unset (optional `CDSE_PROXY_SECRET` override).
 2.  **`cubedash/_utils.py`**:
-    -   **Planetary Computer Integration**: Automatically signs data URLs using the `planetary-computer` library. This allows the Explorer to access and display datasets from Microsoft's Planetary Computer using temporary SAS tokens (SAS tokens).
-    -   **Local URL Resolution**: Correctly resolves and redirects `file:///local_data/` paths to the new `/api/data/` endpoint so they can be viewed in the browser.
+    -   **Planetary Computer Integration**: Automatically signs data URLs using the `planetary-computer` library (temporary SAS tokens).
+    -   **CDSE Integration**: Rewrites CDSE `s3://eodata/...` asset URLs to the local `/explorer/api/cdse/...` proxy path.
+    -   **Local URL Resolution**: Correctly resolves and redirects `file:///local_data/` paths to the `/api/data/` endpoint so they can be viewed in the browser.
+3.  **`shared/notebooks_demo/utils/le_cdse_s3.py`** (installed into the image as `cdse_s3`): Shared CDSE S3 helpers and proxy token mint/verify used by the patches above.
 
 ## Upstream Relationship
 

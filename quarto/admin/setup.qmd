@@ -32,6 +32,9 @@ This repository uses environment variables to configure the local domain, databa
    | `POSTGRES_PASS`       |      Yes | `a-strong-password`        | PostgreSQL password for the Open Data Cube database.          |
    | `JUPYTERHUB_ADMINS`   |      Yes | `admin,bruno`              | Comma-separated list of JupyterHub admin usernames.           |
    | `JUPYTERHUB_USERS`    |       No | `guest,alice,bob`          | Comma-separated list of authorized non-admin usernames.       |
+   | `CDSE_S3_ACCESS_KEY`  |       No | *(empty)*                  | Copernicus Data Space S3 access key (required for CDSE-indexed products). |
+   | `CDSE_S3_SECRET_KEY`  |       No | *(empty)*                  | Copernicus Data Space S3 secret key.                          |
+   | `CDSE_S3_ENDPOINT`    |       No | `https://eodata.dataspace.copernicus.eu` | CDSE S3 API endpoint. |
 : Required environment variables {#tbl-env-vars}
 
 3. First-time setup
@@ -55,9 +58,35 @@ This repository uses environment variables to configure the local domain, databa
    | :--- | :--- | :--- |
    | **`BBOX`** | `lon_min,lat_min,lon_max,lat_max` | Spatial extent in decimal degrees. Use a tool like [bboxfinder.com](http://bboxfinder.com) (copy the **Box** values). |
    | **`DATETIME`** | `start/end` | Temporal extent. Use `YYYY-MM-DD` format (e.g., `2020-01-01/2020-12-31`). |
+   | **`INDEX_CONFIG`** | path to YAML | STAC indexation preset (default: `config/indexation/default.yaml`). |
 : `make setup` parameters {#tbl-setup-params}
+
+::: {.callout-important}
+## Copernicus Data Space products
+
+`config/indexation/default.yaml` indexes Sentinel-2 (`s2_l2a_cdse`) and CLCplus from [Copernicus Data Space STAC](https://stac.dataspace.copernicus.eu/v1/), plus Planetary Computer products (including `s2_l2a_pc`).
+
+- Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` ([S3 credentials](https://documentation.dataspace.copernicus.eu/APIs/S3.html)). These keys are required for **indexing**, **Explorer downloads**, and **notebook access** to CDSE products. Explorer download links are signed automatically (no proxy secret to configure); notebooks read CDSE data directly via `s3://` and do not use that signing path.
+- **S3 endpoint pinning:** when `CDSE_S3_ACCESS_KEY`/`CDSE_S3_SECRET_KEY` are set, notebook and Explorer S3 access is pinned to the CDSE endpoint (`AWS_S3_ENDPOINT=eodata…`, `AWS_VIRTUAL_HOSTING=FALSE`). Generic `s3://` reads from other providers (e.g. AWS-hosted buckets) will not work in that configuration; Planetary Computer assets are unaffected (served over HTTPS with SAS tokens).
+- CLCplus is **Europe-only** — use a European `BBOX` (e.g. Switzerland below).
+- In notebooks, use `get_patch_url` from `utils.le_dc` (CDSE access uses `s3://` paths with GDAL header auth via `utils/le_cdse_s3.py`; presigned URLs are not supported by CDSE):
+
+  ```python
+  from utils.le_dc import get_patch_url
+
+  ds = dc.load(..., patch_url=get_patch_url(dc, product))
+  ```
+
+  Copying `notebooks_demo/` to another location includes `utils/le_cdse_s3.py`; no separate signing module is required. Ensure `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` are set, then restart your Jupyter server so Dask workers inherit the credentials.
+:::
+
+- European setup example (CLCplus):
+
+  ```bash
+  make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
+  ```
 
 ::: {.callout-tip}
 ## Note
-These parameters can also be used individually with `make index` to add more data later without running a full setup (see [Target reference](operations.qmd#target-reference) Table).
+`make product` and `make index` both use `INDEX_CONFIG` (default: `config/indexation/default.yaml`). Only products referenced via `product_file` in that config are registered and indexed. Sentinel-2 L2A is split into `s2_l2a_pc` (Planetary Computer) and `s2_l2a_cdse` (CDSE); other ODC names are unchanged (`nasadem`, etc.). Source is recorded in each product YAML under `metadata.product.source`.
 :::

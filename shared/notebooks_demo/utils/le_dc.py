@@ -1,7 +1,63 @@
+import os
+import random
+from pathlib import Path
 from shapely.geometry import box, Polygon
 from shapely.ops import unary_union
-from typing import Any, Dict, Optional, Tuple
-import random
+from typing import Any, Callable, Dict, Optional, Tuple
+
+from utils.le_cdse_s3 import ensure_cdse_gdal_env, sign_url as _cdse_sign_url
+
+
+def _ensure_notebooks_demo_on_path() -> None:
+    """Prepend notebooks_demo root to PYTHONPATH for Dask worker subprocesses."""
+    root = str(Path(__file__).resolve().parent.parent)
+    existing = os.environ.get("PYTHONPATH", "")
+    if root not in existing.split(os.pathsep):
+        os.environ["PYTHONPATH"] = (
+            f"{root}{os.pathsep}{existing}" if existing else root
+        )
+
+
+_ensure_notebooks_demo_on_path()
+ensure_cdse_gdal_env()
+
+
+def sign_cdse_url(url: str) -> str:
+    """Pickle-safe patch_url callback for Copernicus CDSE assets."""
+    ensure_cdse_gdal_env()
+    return _cdse_sign_url(url)
+
+
+def get_patch_url(dc: Any, product: str) -> Callable[[str], str]:
+    """Return a patch_url callback for dc.load based on product source."""
+    prod = dc.index.products.get_by_name(product)
+    source = prod.metadata_doc.get("product", {}).get("source", "")
+    if source == "copernicus":
+        return sign_cdse_url
+    from planetary_computer import sign_url
+
+    return sign_url
+
+
+def is_cdse_product(dc: Any, product: str) -> bool:
+    """Return True when the ODC product is indexed from Copernicus Data Space."""
+    prod = dc.index.products.get_by_name(product)
+    return prod.metadata_doc.get("product", {}).get("source", "") == "copernicus"
+
+
+def recommended_dask_workers(dc: Any, product: str, default: int = 4) -> int:
+    """CDSE S3 rate-limits parallel GDAL reads; use fewer Dask workers."""
+    return 1 if is_cdse_product(dc, product) else default
+
+
+def configure_dask_for_product(dc: Any, product: str, client: Any = None) -> None:
+    """Apply CDSE GDAL env on the driver and Dask workers when needed."""
+    if not is_cdse_product(dc, product):
+        return
+    ensure_cdse_gdal_env()
+    if client is not None:
+        client.run(ensure_cdse_gdal_env)
+
 
 def get_product_bbox(
     dc: Any,
