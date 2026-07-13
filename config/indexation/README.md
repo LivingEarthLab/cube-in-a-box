@@ -65,6 +65,8 @@ Pass `TIME_INDEX=1` to print per-product durations and total wall time at the en
 
 Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` when indexing CDSE products (`default.yaml`). CLCplus is Europe-only — use a European `BBOX` for meaningful results. With `pc.yaml`, CDSE credentials are not required.
 
+If CDSE indexing fails with transient errors (e.g. 504 or STAC API timeouts), retry with `make index-serie` (`PARALLELISM=1`) for a gentler load on the catalog. This is a mitigation for server flakiness, not evidence of access limits.
+
 Switching `INDEX_CONFIG` on an existing database may replace a product definition with a different source; prefer a fresh setup when changing preset.
 
 With `pc.yaml`, demo notebooks that need CDSE products (notably `CLMS_CLCplus_Europe.ipynb`, and `Sentinel_2.ipynb` when using `s2_l2a_cdse`) will not have those products available — see [`shared/notebooks_demo/README.md`](../../shared/notebooks_demo/README.md).

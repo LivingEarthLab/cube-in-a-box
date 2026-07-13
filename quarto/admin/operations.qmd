@@ -29,7 +29,7 @@ make help
 | `make product`         | Load ODC product definitions from `INDEX_CONFIG` into the database |
 | `make index`           | Index products from `INDEX_CONFIG` (parallel; uses `BBOX`, `DATETIME`) |
 | `make index-parallel`  | Same as `make index` |
-| `make index-serie`     | Index products from `INDEX_CONFIG` sequentially (one at a time) |
+| `make index-serie`     | Index products from `INDEX_CONFIG` sequentially (`PARALLELISM=1`) |
 | `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                                |
 | **Maintenance**        |                                                                                            |
 | `make backup`          | Create a backup of the PostgreSQL database                                                 |
@@ -106,7 +106,9 @@ make index TIME_INDEX=1 BBOX=25,20,35,30 DATETIME=2021-12-01/2021-12-31
 # European BBOX recommended for CLCplus
 make index BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
 
-# Sequential indexing
-make index-serie
+# Sequential indexing (gentler on flaky catalogs such as CDSE)
+make index-serie BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
 ```
+
+If CDSE indexing fails with transient errors (e.g. 504 or STAC API timeouts), retry with `make index-serie` (`PARALLELISM=1`). This reduces concurrent load on the catalog; it is a mitigation for server flakiness, not evidence of access limits.
 

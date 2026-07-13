@@ -305,7 +305,7 @@ make help
 | `make product`         | Load ODC product definitions from `INDEX_CONFIG` into the database |
 | `make index`           | Index products from `INDEX_CONFIG` (parallel; uses `BBOX`, `DATETIME`) |
 | `make index-parallel`  | Same as `make index` |
-| `make index-serie`     | Index products from `INDEX_CONFIG` sequentially |
+| `make index-serie`     | Index products from `INDEX_CONFIG` sequentially (`PARALLELISM=1`) |
 | `make update-explorer` | Rebuild the Explorer index so datasets appear in the web UI                                |
 | **Maintenance**        |                                                                                            |
 | `make backup`          | Create a backup of the PostgreSQL database                                                 |
@@ -335,6 +335,12 @@ make help
   
   # Switzerland all years (till end 2025, might take a while)
   make setup BBOX=5.95,45.81,10.50,47.81 DATETIME=1984-01-01/2025-12-31
+  ```
+
+- If CDSE indexing fails with transient errors (e.g. 504 or STAC API timeouts), retry with `make index-serie` (`PARALLELISM=1`) for a gentler load on the catalog. This is a mitigation for server flakiness, not evidence of access limits:
+
+  ```bash
+  make index-serie BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
   ```
 
 - Start/stop and troubleshoot:

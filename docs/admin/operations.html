@@ -352,7 +352,7 @@ Table&nbsp;6.1: <code>make</code> target reference
 </tr>
 <tr class="even">
 <td><code>make index-serie</code></td>
-<td>Index products from <code>INDEX_CONFIG</code> sequentially (one at a time)</td>
+<td>Index products from <code>INDEX_CONFIG</code> sequentially (<code>PARALLELISM=1</code>)</td>
 </tr>
 <tr class="odd">
 <td><code>make update-explorer</code></td>
@@ -467,8 +467,9 @@ Table&nbsp;6.1: <code>make</code> target reference
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># European BBOX recommended for CLCplus</span></span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31</span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Sequential indexing</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index-serie</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Sequential indexing (gentler on flaky catalogs such as CDSE)</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span> index-serie BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>If CDSE indexing fails with transient errors (e.g.&nbsp;504 or STAC API timeouts), retry with <code>make index-serie</code> (<code>PARALLELISM=1</code>). This reduces concurrent load on the catalog; it is a mitigation for server flakiness, not evidence of access limits.</p>
 
 
 </section>
