@@ -38,12 +38,22 @@ The [`utils/`](./utils/) directory contains shared Python helpers imported by th
 - **Users:** when copying this folder to your workspace (`cp -r /notebooks/shared/notebooks_demo ~/my_notebooks_demo`), `utils/` is included automatically.
 - **CDSE products:** use `get_patch_url` from `utils.le_dc` with `dc.load(..., patch_url=...)`. Requires `CDSE_S3_ACCESS_KEY` / `CDSE_S3_SECRET_KEY` in `.env` (set by the admin).
 
+## Product availability
+
+Not every CiaB deployment indexes the same products. Before running a notebook, check that its product appears in the [CiaB Explorer](http://localhost/explorer).
+
+These demos need Copernicus Data Space (CDSE) products and will not work if those were not indexed:
+
+- **[CLMS_CLCplus_Europe.ipynb](./CLMS_CLCplus_Europe.ipynb)** — needs `clms_clcplus_europe_100m`
+- **[Sentinel_2.ipynb](./Sentinel_2.ipynb)** — `s2_l2a_pc` is fine when present; `s2_l2a_cdse` only works if that product was indexed (keep `product = 's2_l2a_pc'` otherwise)
+
 ## Quick Start
 
-**Jupyter Notebooks form the Demo Serie are supposed to work without any input from the user as long as the CiaB was created with default setup**.
+**Jupyter Notebooks from the Demo Serie are supposed to work without any input from the user as long as the CiaB was set up with the usual full product set for your site.**
 
-In the case it wasn't the case, useer might need to:
-- draw it'own Area of Interest (AoI)
-- check the requested product is available by using the [CiaB Explorer](http://localhost/explorer).
+If products or coverage differ, you might need to:
+- draw your own Area of Interest (AoI)
+- confirm the requested product is available in the [CiaB Explorer](http://localhost/explorer)
+- skip notebooks whose products are missing (see above)
 
-**Remember all file sand folder in the `./shared` folder are read only at the exception of user own folder (`./shared/all_users/<OWN_FOLDER>`). Then all Jupyter Notebooks in `./shared/notebooks_demo` can be executed and modified, but cannot be saved. To do so, user need to copy the folder to JupyterLab root (as well as any other file or folder from shared by another user**.
+**Remember:** files and folders under `./shared` are read-only except your own folder (`./shared/all_users/<OWN_FOLDER>`). Notebooks in `./shared/notebooks_demo` can be executed and modified in the session, but cannot be saved there — copy the folder to your JupyterLab root (same for any other shared path) to keep edits.

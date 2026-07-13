@@ -43,9 +43,12 @@ Only products listed in the active config are registered (`make product`) and in
 | `config/products/pc/` | `planetary-computer` | PC STAC products |
 | `config/products/cop/` | `copernicus` | CDSE STAC products |
 
-## Preset
+## Presets
 
-- `default.yaml` — 11 products from Planetary Computer and Copernicus Data Space (including `s2_l2a_pc` and `s2_l2a_cdse` as separate Sentinel-2 L2A products)
+| File | Contents |
+|------|----------|
+| `default.yaml` | Planetary Computer + Copernicus Data Space (11 products, including `s2_l2a_pc` and `s2_l2a_cdse`) |
+| `pc.yaml` | Planetary Computer only (8 products; no CDSE catalog or credentials) |
 
 ## Usage
 
@@ -53,10 +56,15 @@ Only products listed in the active config are registered (`make product`) and in
 make setup BBOX=... DATETIME=...
 make index-serie
 make index TIME_INDEX=1 BBOX=... DATETIME=...
+
+# Planetary Computer only (no Copernicus / CDSE products)
+make setup INDEX_CONFIG=config/indexation/pc.yaml BBOX=... DATETIME=...
 ```
 
 Pass `TIME_INDEX=1` to print per-product durations and total wall time at the end of indexing.
 
-Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` when indexing CDSE products. CLCplus is Europe-only — use a European `BBOX` for meaningful results.
+Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` when indexing CDSE products (`default.yaml`). CLCplus is Europe-only — use a European `BBOX` for meaningful results. With `pc.yaml`, CDSE credentials are not required.
 
 Switching `INDEX_CONFIG` on an existing database may replace a product definition with a different source; prefer a fresh setup when changing preset.
+
+With `pc.yaml`, demo notebooks that need CDSE products (notably `CLMS_CLCplus_Europe.ipynb`, and `Sentinel_2.ipynb` when using `s2_l2a_cdse`) will not have those products available — see [`shared/notebooks_demo/README.md`](../../shared/notebooks_demo/README.md).
