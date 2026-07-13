@@ -36,6 +36,8 @@ The ODC product name used for indexing (`--rename-product`) is read from the `na
 
 Only products listed in the active config are registered (`make product`) and indexed (`make index`).
 
+**Product order:** `products` are started in list order. Put larger or slower products (for example Sentinel-2) first so parallel `make index` fills worker slots with heavy jobs early; the same order is used sequentially by `make index-serie`.
+
 ## Layout
 
 | Folder | `source` in YAML | Contents |
@@ -65,7 +67,7 @@ Pass `TIME_INDEX=1` to print per-product durations and total wall time at the en
 
 Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` when indexing CDSE products (`default.yaml`). CLCplus is Europe-only — use a European `BBOX` for meaningful results. With `pc.yaml`, CDSE credentials are not required.
 
-If CDSE indexing fails with transient errors (e.g. 504 or STAC API timeouts), retry with `make index-serie` (`PARALLELISM=1`) for a gentler load on the catalog. This is a mitigation for server flakiness, not evidence of access limits.
+If a product fails (e.g. CDSE 504 or STAC API timeouts), the index script prints a short summary instead of a full Python traceback and **continues with the remaining products**; the overall run still exits non-zero if any required product failed. Retry failed products with `make index-serie` (`PARALLELISM=1`) or a one-product `INDEX_CONFIG`. This is a mitigation for server flakiness, not evidence of access limits.
 
 Switching `INDEX_CONFIG` on an existing database may replace a product definition with a different source; prefer a fresh setup when changing preset.
 

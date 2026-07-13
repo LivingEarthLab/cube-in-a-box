@@ -92,6 +92,8 @@ make help
 
 Indexation presets live in `config/indexation/`. ODC product definitions live in `config/products/pc/` (Planetary Computer) and `config/products/cop/` (Copernicus CDSE), with `metadata.product.source` set in each YAML.
 
+List larger or slower products first in the `products` section of `INDEX_CONFIG` so parallel `make index` starts them before smaller ones (see `config/indexation/README.md`).
+
 | Config | Source(s) | Products |
 | ------ | --------- | -------- |
 | `default.yaml` (default) | Planetary Computer + CDSE | 11 products: `s2_l2a_pc`, `s2_l2a_cdse`, CLCplus (CDSE); S1 RTC, Landsat, NASADEM, ESA WorldCover, ESRI land cover (PC) |

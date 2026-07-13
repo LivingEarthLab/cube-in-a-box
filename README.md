@@ -343,6 +343,8 @@ make help
   make index-serie BBOX=5.95,45.81,10.50,47.81 DATETIME=2024-01-01/2024-12-31
   ```
 
+- In `INDEX_CONFIG`, list larger or slower products first in the `products` section so parallel indexing starts them before smaller ones (see [`config/indexation/README.md`](config/indexation/README.md)).
+
 - Start/stop and troubleshoot:
 
   ```bash

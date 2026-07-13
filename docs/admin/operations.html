@@ -437,6 +437,7 @@ Table&nbsp;6.1: <code>make</code> target reference
 <h2 data-number="6.3" class="anchored" data-anchor-id="stac-indexation-configs"><span class="header-section-number">6.3</span> STAC indexation configs</h2>
 <p><code>make product</code> and <code>make index</code> both read the same <code>INDEX_CONFIG</code> YAML. Only products listed in that file are registered and indexed.</p>
 <p>Indexation presets live in <code>config/indexation/</code>. ODC product definitions live in <code>config/products/pc/</code> (Planetary Computer) and <code>config/products/cop/</code> (Copernicus CDSE), with <code>metadata.product.source</code> set in each YAML.</p>
+<p>List larger or slower products first in the <code>products</code> section of <code>INDEX_CONFIG</code> so parallel <code>make index</code> starts them before smaller ones (see <code>config/indexation/README.md</code>).</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 26%">

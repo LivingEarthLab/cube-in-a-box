@@ -89,5 +89,5 @@ This repository uses environment variables to configure the local domain, databa
 
 ::: {.callout-tip}
 ## Note
-`make product` and `make index` both use `INDEX_CONFIG` (default: `config/indexation/default.yaml`). Only products referenced via `product_file` in that config are registered and indexed. Sentinel-2 L2A is split into `s2_l2a_pc` (Planetary Computer) and `s2_l2a_cdse` (CDSE); other ODC names are unchanged (`nasadem`, etc.). Source is recorded in each product YAML under `metadata.product.source`.
+`make product` and `make index` both use `INDEX_CONFIG` (default: `config/indexation/default.yaml`). Only products referenced via `product_file` in that config are registered and indexed. Sentinel-2 L2A is split into `s2_l2a_pc` (Planetary Computer) and `s2_l2a_cdse` (CDSE); other ODC names are unchanged (`nasadem`, etc.). Source is recorded in each product YAML under `metadata.product.source`. List larger or slower products first in the config `products` list so parallel indexing starts them before smaller ones.
 :::

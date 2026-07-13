@@ -22,9 +22,15 @@ if [[ "${TIME_INDEX}" == "1" || "${TIME_INDEX}" == "true" ]]; then
 fi
 
 cleanup_temp_dirs() {
-  [[ -n "${timing_dir}" && -d "${timing_dir}" ]] && rm -rf "${timing_dir}"
-  [[ -n "${log_dir}" && -d "${log_dir}" ]] && rm -rf "${log_dir}"
-  [[ -n "${log_lock}" && -f "${log_lock}" ]] && rm -f "${log_lock}"
+  if [[ -n "${timing_dir}" && -d "${timing_dir}" ]]; then
+    rm -rf "${timing_dir}"
+  fi
+  if [[ -n "${log_dir}" && -d "${log_dir}" ]]; then
+    rm -rf "${log_dir}"
+  fi
+  if [[ -n "${log_lock}" && -f "${log_lock}" ]]; then
+    rm -f "${log_lock}"
+  fi
 }
 trap cleanup_temp_dirs EXIT
 
@@ -107,6 +113,7 @@ finish_indexing() {
   fi
 
   log_line "$(date) All indexing jobs completed successfully (config=${INDEX_CONFIG}, MODE=${MODE})."
+  exit 0
 }
 
 if [[ "${MODE}" != "dev" && "${MODE}" != "prod" ]]; then
@@ -159,6 +166,51 @@ filter_job_output() {
   grep -Ev 'API did not return the number of items|Indexing from STAC API' || [[ $? -eq 1 ]]
 }
 
+# Classify known STAC/catalog failures and print a short message instead of a traceback.
+report_job_failure() {
+  local product_id="$1"
+  local log_file="$2"
+  local reason="" hint=""
+
+  if [[ ! -f "${log_file}" ]]; then
+    log_line "ERROR: ${product_id}: indexing failed (no job log captured)"
+    return
+  fi
+
+  if grep -qiE '504[[:space:]]+Gateway Time-?out' "${log_file}"; then
+    reason="STAC catalog returned 504 Gateway Time-out"
+    hint=1
+  elif grep -qiE '502[[:space:]]+Bad Gateway' "${log_file}"; then
+    reason="STAC catalog returned 502 Bad Gateway"
+    hint=1
+  elif grep -qiE '503[[:space:]]+Service Unavailable' "${log_file}"; then
+    reason="STAC catalog returned 503 Service Unavailable"
+    hint=1
+  elif grep -qiE 'Read timed out|timed?[[:space:]]*out' "${log_file}"; then
+    reason="STAC catalog request timed out"
+    hint=1
+  elif grep -qiE 'RemoteDisconnected|ConnectionResetError|Connection refused|ConnectionError|Connection aborted' "${log_file}"; then
+    reason="STAC catalog connection failed"
+    hint=1
+  elif grep -qi 'APIError' "${log_file}"; then
+    reason="STAC catalog APIError"
+    hint=1
+  fi
+
+  if [[ -n "${reason}" ]]; then
+    log_line "ERROR: ${product_id}: ${reason}"
+    if [[ -n "${hint}" ]]; then
+      log_line "Hint: transient catalog issue; retry with make index-serie or a one-product INDEX_CONFIG"
+    fi
+    return
+  fi
+
+  log_line "ERROR: ${product_id}: indexing failed"
+  log_line "---- last log lines ----"
+  tail -n 15 "${log_file}" | log_block || true
+  log_line "---- end log ----"
+}
+
 run_job_body() {
   local product_id="$1"
   local optional="$2"
@@ -167,45 +219,42 @@ run_job_body() {
   local -a env_args=("$@")
 
   local job_start elapsed status=ok rc=0
-  local job_log=""
+  local job_log="" own_log=0 docker_rc=0
   job_start=$(date +%s)
 
   if [[ -n "${log_dir}" ]]; then
     job_log="${log_dir}/${product_id}.log"
+  else
+    job_log="$(mktemp)"
+    own_log=1
   fi
 
   # Quiet compose lifecycle + start.sh banners + pystac UserWarnings
   env_args+=(-e "START_QUIET=1" -e "PYTHONWARNINGS=ignore")
 
-  run_docker_job() {
-    if [[ -n "${job_log}" ]]; then
-      "${DC[@]}" --progress quiet --profile init run --rm "${env_args[@]}" \
-        jupyter bash -lc "${cmd}" >>"${job_log}" 2>&1
-    else
-      local out_tmp docker_rc
-      out_tmp="$(mktemp)"
-      set +e
-      "${DC[@]}" --progress quiet --profile init run --rm "${env_args[@]}" \
-        jupyter bash -lc "${cmd}" >"${out_tmp}" 2>&1
-      docker_rc=$?
-      set -e
-      filter_job_output < "${out_tmp}" || true
-      rm -f "${out_tmp}"
-      return "${docker_rc}"
-    fi
-  }
+  set +e
+  "${DC[@]}" --progress quiet --profile init run --rm "${env_args[@]}" \
+    jupyter bash -lc "${cmd}" >"${job_log}" 2>&1
+  docker_rc=$?
+  set -e
 
   if [[ "${optional}" == "True" ]]; then
-    if ! run_docker_job; then
+    if [[ "${docker_rc}" -ne 0 ]]; then
       status=skipped
+      report_job_failure "${product_id}" "${job_log}"
+    else
+      filter_job_output < "${job_log}" | log_block || true
     fi
-  elif ! run_docker_job; then
+  elif [[ "${docker_rc}" -ne 0 ]]; then
     status=failed
     rc=1
+    report_job_failure "${product_id}" "${job_log}"
+  else
+    filter_job_output < "${job_log}" | log_block || true
   fi
 
-  if [[ -n "${job_log}" && -f "${job_log}" ]]; then
-    filter_job_output < "${job_log}" | log_block || true
+  if (( own_log )); then
+    rm -f "${job_log}"
   fi
 
   elapsed=$(($(date +%s) - job_start))
@@ -297,12 +346,12 @@ sys.stdout.write("\0".join(str(job.get(f, "")) for f in fields))
 check_jobs() {
   local -a new_pids=()
   local pid
-  for pid in "${pids[@]:-}"; do
+  for pid in "${pids[@]}"; do
     if kill -0 "${pid}" 2>/dev/null; then
       new_pids+=("${pid}")
     fi
   done
-  pids=("${new_pids[@]:-}")
+  pids=("${new_pids[@]}")
 }
 
 wait_for_free_slot() {
@@ -319,21 +368,22 @@ if (( timing_enabled )); then
   index_start_epoch=$(date +%s)
 fi
 
+any_failed=0
 for job_json in "${job_lines[@]}"; do
   if [[ "${parallelism}" != "1" ]]; then
     wait_for_free_slot
   fi
   if ! run_job "${job_json}"; then
-    finish_indexing 1
+    any_failed=1
   fi
 done
 
 if [[ "${parallelism}" == "1" ]]; then
-  finish_indexing 0
+  finish_indexing "${any_failed}"
 fi
 
 failed=0
-for pid in "${pids[@]:-}"; do
+for pid in "${pids[@]}"; do
   if ! wait "${pid}"; then
     failed=1
   fi

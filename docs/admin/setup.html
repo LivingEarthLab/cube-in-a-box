@@ -460,7 +460,7 @@ Table&nbsp;4.2: <code>make setup</code> parameters
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><code>make product</code> and <code>make index</code> both use <code>INDEX_CONFIG</code> (default: <code>config/indexation/default.yaml</code>). Only products referenced via <code>product_file</code> in that config are registered and indexed. Sentinel-2 L2A is split into <code>s2_l2a_pc</code> (Planetary Computer) and <code>s2_l2a_cdse</code> (CDSE); other ODC names are unchanged (<code>nasadem</code>, etc.). Source is recorded in each product YAML under <code>metadata.product.source</code>.</p>
+<p><code>make product</code> and <code>make index</code> both use <code>INDEX_CONFIG</code> (default: <code>config/indexation/default.yaml</code>). Only products referenced via <code>product_file</code> in that config are registered and indexed. Sentinel-2 L2A is split into <code>s2_l2a_pc</code> (Planetary Computer) and <code>s2_l2a_cdse</code> (CDSE); other ODC names are unchanged (<code>nasadem</code>, etc.). Source is recorded in each product YAML under <code>metadata.product.source</code>. List larger or slower products first in the config <code>products</code> list so parallel indexing starts them before smaller ones.</p>
 </div>
 </div>
 
