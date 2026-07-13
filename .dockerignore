@@ -2,4 +2,5 @@
 !requirements.txt
 !scripts/start.sh
 !datacube-explorer/cubedash/
+!datacube-explorer/pc_proxy.py
 !shared/notebooks_demo/utils/le_cdse_s3.py

@@ -223,7 +223,7 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Inspect Metadata</strong>: Check the <code>DATASETS</code> option, and click on any geographic box to see the scene metadata.</li>
 <li><strong>Download Data</strong>: Click on the urls of the files (single-band GeoTIFFs) to download in the <code>Location</code> section.</li>
 </ol>
-<p>Planetary Computer assets use temporary SAS-signed HTTPS links. Copernicus Data Space (CDSE) assets are streamed through Explorer’s local download proxy (short-lived signed links generated automatically). CDSE downloads require the administrator to have set <code>CDSE_S3_ACCESS_KEY</code> / <code>CDSE_S3_SECRET_KEY</code> in <code>.env</code>.</p>
+<p>Planetary Computer Azure blob assets use Explorer’s local download proxy (<code>/explorer/api/pc/...</code> with short-lived signed links); the proxy redirects to a freshly SAS-signed blob URL. Public preview/Data API URLs stay direct. Copernicus Data Space (CDSE) assets are streamed through Explorer’s local download proxy (<code>/explorer/api/cdse/...</code>). CDSE downloads require the administrator to have set <code>CDSE_S3_ACCESS_KEY</code> / <code>CDSE_S3_SECRET_KEY</code> in <code>.env</code>.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">

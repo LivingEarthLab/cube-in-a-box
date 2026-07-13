@@ -41,7 +41,7 @@ from sqlalchemy import TIMESTAMP, func
 from werkzeug.datastructures import MultiDict
 
 from cdse_s3 import extract_key, proxy_path as cdse_proxy_path
-from planetary_computer import sign
+from pc_proxy import proxy_path as pc_proxy_path
 
 if TYPE_CHECKING:
     from cubedash._model import ProductWithSummary
@@ -153,18 +153,17 @@ def get_dataset_file_offsets(dataset: Dataset) -> dict[str, str]:
         dataset_doc = serialise.from_doc(dataset.metadata_doc, skip_validation=True)
         uri_list.update({name: a.path for name, a in dataset_doc.accessories.items()})
 
-    # sign paths if provider is planetarycomputer
-    try:
-        if dataset.metadata_doc["accessories"]["tilejson"]["path"].startswith(
-            "https://planetarycomputer.microsoft.com/api/data"
-        ):
-            k, v = list(uri_list.items())[0]
-            signed_postfix = sign(v).replace(v, "")
-            for k, v in uri_list.items():
-                uri_list[k] = v + signed_postfix
-    except (KeyError, TypeError):
-        # partial, local or other dataset without accessories
-        pass
+    # Explorer map overlay looks for accessory key "thumbnail"; Planetary Computer
+    # stores the preview under "rendered_preview" instead.
+    if "thumbnail" not in uri_list and "rendered_preview" in uri_list:
+        uri_list["thumbnail"] = uri_list["rendered_preview"]
+
+    # Route Planetary Computer Azure blob assets through the local Explorer proxy
+    # (short-lived signed links; API redirects to a fresh SAS URL).
+    # Data API URLs (rendered_preview, tilejson, etc.) stay direct — they are public.
+    for name, path in list(uri_list.items()):
+        if ".blob.core.windows.net" in path:
+            uri_list[name] = pc_proxy_path(path)
 
     # Route Copernicus (CDSE) eodata assets through the local Explorer proxy
     # (short-lived signed links; signing secret is auto-generated in-process).

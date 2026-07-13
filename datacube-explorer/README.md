@@ -43,11 +43,14 @@ This directory contains patches to the standard Explorer codebase to support the
 1.  **`cubedash/_api.py`**:
     -   **`/api/data/<filename>`**: Serves files from the `/local_data` directory bridged from the host.
     -   **`/api/cdse/<object_key>`**: Streams CDSE `eodata` objects through a short-lived signed download proxy (requires `CDSE_S3_*` credentials on the Explorer service). Signing uses an internal secret auto-generated in the container when unset (optional `CDSE_PROXY_SECRET` override).
+    -   **`/api/pc/<blob_ref>`**: Planetary Computer Azure blob proxy — verifies a short-lived token, then **302 redirects** to a freshly SAS-signed blob URL (optional `PC_PROXY_SECRET` override).
 2.  **`cubedash/_utils.py`**:
-    -   **Planetary Computer Integration**: Automatically signs data URLs using the `planetary-computer` library (temporary SAS tokens).
+    -   **Planetary Computer Integration**: Rewrites `*.blob.core.windows.net` asset URLs to `/explorer/api/pc/...`; aliases `rendered_preview` to `thumbnail` for map overlays; leaves public Data API URLs unsigned.
     -   **CDSE Integration**: Rewrites CDSE `s3://eodata/...` asset URLs to the local `/explorer/api/cdse/...` proxy path.
     -   **Local URL Resolution**: Correctly resolves and redirects `file:///local_data/` paths to the `/api/data/` endpoint so they can be viewed in the browser.
-3.  **`shared/notebooks_demo/utils/le_cdse_s3.py`** (installed into the image as `cdse_s3`): Shared CDSE S3 helpers and proxy token mint/verify used by the patches above.
+3.  **`cubedash/templates/dataset.html`**: Embeds thumbnail URLs with Jinja `tojson` so Planetary Computer preview query strings keep `&` (HTML-escaping `&amp;` otherwise breaks the Data API).
+4.  **`pc_proxy.py`** (installed into the image as `pc_proxy`): Token mint/verify and path rewrite for Planetary Computer blob downloads.
+5.  **`shared/notebooks_demo/utils/le_cdse_s3.py`** (installed into the image as `cdse_s3`): Shared CDSE S3 helpers and proxy token mint/verify used by the patches above.
 
 ## Upstream Relationship
 

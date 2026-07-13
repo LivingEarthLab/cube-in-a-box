@@ -181,3 +181,25 @@ def cdse_file(object_key):
         content_type=obj.get("ContentType", "application/octet-stream"),
         headers=headers,
     )
+
+
+@bp.route("/pc/<path:blob_ref>")
+def pc_file(blob_ref):
+    """Redirect to a freshly SAS-signed Planetary Computer Azure blob URL."""
+    from pc_proxy import url_from_blob_ref, verify_token
+    from planetary_computer import sign
+
+    canonical = url_from_blob_ref(blob_ref)
+    if not canonical:
+        abort(400, "Not a Planetary Computer Azure blob path")
+
+    if not verify_token(canonical, request.args.get("sig")):
+        abort(403, "Invalid or expired PC proxy token")
+
+    try:
+        signed = sign(canonical)
+    except Exception as e:
+        _LOG.warning("pc_proxy_sign_failed", url=canonical, error=str(e))
+        abort(502, "Failed to sign Planetary Computer blob URL")
+
+    return flask.redirect(signed, code=302)

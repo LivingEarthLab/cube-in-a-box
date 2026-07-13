@@ -24,6 +24,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY datacube-explorer/cubedash/_utils.py /app/lib/python3.12/site-packages/cubedash/_utils.py
 COPY datacube-explorer/cubedash/_api.py /app/lib/python3.12/site-packages/cubedash/_api.py
+COPY datacube-explorer/cubedash/templates/dataset.html /app/lib/python3.12/site-packages/cubedash/templates/dataset.html
+COPY datacube-explorer/pc_proxy.py /app/lib/python3.12/site-packages/pc_proxy.py
 COPY shared/notebooks_demo/utils/le_cdse_s3.py /app/lib/python3.12/site-packages/cdse_s3.py
 
 # Final image: keep base entrypoint/CMD; only ship the updated /app environment
