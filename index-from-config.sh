@@ -153,6 +153,12 @@ init_parallel_logging
 declare -a pids
 pids=()
 
+# Drop known STAC/index chatter; keep Added/error lines and anything unexpected.
+filter_job_output() {
+  # grep exits 1 when every line is filtered; treat that as success.
+  grep -Ev 'API did not return the number of items|Indexing from STAC API' || [[ $? -eq 1 ]]
+}
+
 run_job_body() {
   local product_id="$1"
   local optional="$2"
@@ -168,11 +174,24 @@ run_job_body() {
     job_log="${log_dir}/${product_id}.log"
   fi
 
+  # Quiet compose lifecycle + start.sh banners + pystac UserWarnings
+  env_args+=(-e "START_QUIET=1" -e "PYTHONWARNINGS=ignore")
+
   run_docker_job() {
     if [[ -n "${job_log}" ]]; then
-      "${DC[@]}" --profile init run --rm "${env_args[@]}" jupyter bash -lc "${cmd}" >>"${job_log}" 2>&1
+      "${DC[@]}" --progress quiet --profile init run --rm "${env_args[@]}" \
+        jupyter bash -lc "${cmd}" >>"${job_log}" 2>&1
     else
-      "${DC[@]}" --profile init run --rm "${env_args[@]}" jupyter bash -lc "${cmd}"
+      local out_tmp docker_rc
+      out_tmp="$(mktemp)"
+      set +e
+      "${DC[@]}" --progress quiet --profile init run --rm "${env_args[@]}" \
+        jupyter bash -lc "${cmd}" >"${out_tmp}" 2>&1
+      docker_rc=$?
+      set -e
+      filter_job_output < "${out_tmp}" || true
+      rm -f "${out_tmp}"
+      return "${docker_rc}"
     fi
   }
 
@@ -186,7 +205,7 @@ run_job_body() {
   fi
 
   if [[ -n "${job_log}" && -f "${job_log}" ]]; then
-    cat "${job_log}" | log_block
+    filter_job_output < "${job_log}" | log_block || true
   fi
 
   elapsed=$(($(date +%s) - job_start))
