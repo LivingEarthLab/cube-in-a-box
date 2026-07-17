@@ -1,0 +1,13 @@
+# AlphaEarh indexation
+parallelism: 4
+
+catalogs:
+  alphaearth:
+    href: alphaearth
+
+products:
+  - id: aef_annual
+    catalog: alphaearth
+    collection: aef_annual
+    product_file: products/aef/aef_annual.odc-product.yaml
+    datetime: true

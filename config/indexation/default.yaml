@@ -9,6 +9,8 @@ catalogs:
   cdse:
     href: https://stac.dataspace.copernicus.eu/v1/
     auth: cdse_s3
+  alphaearth:
+    href: alphaearth
 
 products:
   - id: sentinel-2-l2a-pc
@@ -72,3 +74,10 @@ products:
     collection: esa-worldcover
     product_file: products/pc/esa_worldcover.odc-product.yaml
     optional: true
+  
+  - id: aef_annual
+    catalog: alphaearth
+    collection: aef_annual
+    product_file: products/aef/aef_annual.odc-product.yaml
+    datetime: true
+    

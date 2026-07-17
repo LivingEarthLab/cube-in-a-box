@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/opt/homebrew/bin/bash
 # Index ODC datasets from STAC using a YAML configuration file.
 set -euo pipefail
 
@@ -285,6 +285,44 @@ fields = ["id", "catalog_href", "auth", "collection", "optional",
 sys.stdout.write("\0".join(str(job.get(f, "")) for f in fields))
 ' "${job_json}")
 
+  # AlphaEarth datasets are not served through a STAC API - dispatch to a
+  # dedicated indexer, but keep it on the same execution path (container,
+  # logging, timing, parallelism) as every other product.
+  if [[ "${product_id}" == "aef_annual" ]]; then
+    local -a aef_args=(
+      python3 scripts/index_aef.py
+      "--bbox=${BBOX}"
+      "--datetime=${DATETIME}"
+      "--product=aef_annual"
+      "--docs-dir=dataset_docs/aef"
+    )
+    local cmd
+    #cmd="$(printf '%q ' "${aef_args[@]}")"
+    cmd="pip install --quiet aef-loader && $(printf '%q ' "${aef_args[@]}")"
+
+    log_line "$(date) Start processing: ${product_id} (config=${INDEX_CONFIG}, MODE=${MODE})"
+    if [[ "${parallelism}" == "1" ]]; then
+      if run_job_body "${product_id}" "${optional}" "${cmd}" -e "AWS_NO_SIGN_REQUEST=true"; then
+        log_line "$(date) Successfully completed: ${product_id} (MODE=${MODE})"
+      else
+        log_line "$(date) ERROR processing: ${product_id} (MODE=${MODE})"
+        return 1
+      fi
+      return
+    fi
+
+    (
+      if run_job_body "${product_id}" "${optional}" "${cmd}" -e "AWS_NO_SIGN_REQUEST=true"; then
+        log_line "$(date) Successfully completed: ${product_id} (MODE=${MODE})"
+      else
+        log_line "$(date) ERROR processing: ${product_id} (MODE=${MODE})"
+        exit 1
+      fi
+    ) &
+    pids+=("$!")
+    return
+  fi
+  
   local -a stac_args=(
     stac-to-dc
     "--bbox=${BBOX}"

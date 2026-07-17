@@ -87,6 +87,7 @@ services:
     volumes:
       - ./data/local_data:/local_data
       - ./distributed.yaml:/etc/dask/distributed.yaml
+      - ./scripts/index_aef.py:/notebooks/scripts/index_aef.py:ro
     healthcheck:
       test: [ "CMD", "python3", "-c", "import sys; sys.exit(0)" ]
       interval: 10s

@@ -1,6 +1,7 @@
 --extra-index-url https://packages.dea.ga.gov.au/
 
 # Core dependencies
+aef-loader
 aiohttp
 aiobotocore[boto3,awscli]
 click
