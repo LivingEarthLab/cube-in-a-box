@@ -15,6 +15,7 @@ This directory contains a collection of Jupyter notebooks demonstrating various 
 | Notebook | Description | Key Modules/Tools |
 | :--- | :--- | :--- |
 | **[CLMS_CLCplus_Europe.ipynb](./CLMS_CLCplus_Europe.ipynb)** | Demonstrates loading and plotting CLMS CLCplus LULUCF Instance Europe 100 m. | `datacube`, `matplotlib` |
+| **[AlphaEarth_AEF_annual.ipynb](./AlphaEarth_AEF_annual.ipynb)** | Demonstrates loading and visualizing AlphaEarth Foundations annual 64-band satellite embeddings (10 m), including a PCA RGB preview. | `datacube`, `matplotlib`, `numpy` |
 | **[ESRI_Land_Cover.ipynb](./ESRI_Land_Cover.ipynb)** | Demonstrates loading and plotting ESRI Land Cover data. | `datacube`, `matplotlib` |
 | **[ESA_Worldcover.ipynb](./ESA_Worldcover.ipynb)** | Demonstrates loading and plotting ESA Worldcover data. | `datacube`, `matplotlib` |
 | **[Landsat_Collection_2_Level-2_Science_Products.ipynb](./Landsat_Collection_2_Level-2_Science_Products.ipynb)** | Covers processing Landsat C2 L2 products, including DN to SR conversion. | `datacube`, `dask` |
@@ -46,6 +47,10 @@ These demos need Copernicus Data Space (CDSE) products and will not work if thos
 
 - **[CLMS_CLCplus_Europe.ipynb](./CLMS_CLCplus_Europe.ipynb)** — needs `clms_clcplus_europe_100m`
 - **[Sentinel_2.ipynb](./Sentinel_2.ipynb)** — `s2_l2a_pc` is fine when present; `s2_l2a_cdse` only works if that product was indexed (keep `product = 's2_l2a_pc'` otherwise)
+
+This demo needs a non-CDSE product to be indexed (no CDSE credentials required):
+
+- **[AlphaEarth_AEF_annual.ipynb](./AlphaEarth_AEF_annual.ipynb)** — needs `aef_annual` (Source Cooperative, unsigned HTTPS COGs; no `patch_url`/credentials involved)
 
 ## Quick Start
 
