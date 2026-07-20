@@ -1,4 +1,4 @@
-#!/opt/homebrew/bin/bash
+#!/usr/bin/env bash
 # Index ODC datasets from STAC using a YAML configuration file.
 set -euo pipefail
 

@@ -15,7 +15,7 @@ Pipeline:
 
 Prerequisites:
     pip install aef-loader
-    datacube product add config/products/source_coop/aef_annual.odc-product.yaml
+    datacube product add config/products/aef/aef_annual.odc-product.yaml
 
 Usage:
     python3 scripts/index_aef.py \\
@@ -190,7 +190,7 @@ def build_eo3_document(tile, grid: dict, product: str) -> dict:
     }
 
     year = tile.year
-    region_code = f"{tile.utm_zone or grid['crs'].replace(':', '_')}-{tile.id}"
+    region_code = f"{tile.utm_zone or grid['crs'].replace(':', '_')}"
 
     return {
         "$schema": "https://schemas.opendatacube.org/dataset",
