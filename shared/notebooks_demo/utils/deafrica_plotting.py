@@ -258,16 +258,16 @@ def rgb(ds,
                                                         **kwargs)
             
     # Set the background color of each facet
-    if hasattr(img, 'axes'):
-        if hasattr(img.axes, 'flatten'):
-            for ax in img.axes.flatten():
-                ax.set_facecolor(nodata_color)
-                if bckg_color is not None:
-                    ax.figure.set_facecolor(bckg_color)
-        else:
-            img.axes.set_facecolor(nodata_color)
+    # FacetGrid (faceted imshow) uses .axs; matplotlib artists use .axes
+    if hasattr(img, 'axs'):
+        for ax in img.axs.flatten():
+            ax.set_facecolor(nodata_color)
             if bckg_color is not None:
-                img.figure.set_facecolor(bckg_color)
+                ax.figure.set_facecolor(bckg_color)
+    elif hasattr(img, 'axes'):
+        img.axes.set_facecolor(nodata_color)
+        if bckg_color is not None:
+            img.figure.set_facecolor(bckg_color)
     else:
         img.set_array(ds.where(ds[bands[0]] != nodata_value)[bands].transpose().values)
         img.axes.set_facecolor(nodata_color)
