@@ -49,8 +49,9 @@ Only products listed in the active config are registered (`make product`) and in
 
 | File | Contents |
 |------|----------|
-| `default.yaml` | Planetary Computer + Copernicus Data Space (11 products, including `s2_l2a_pc` and `s2_l2a_cdse`) |
-| `pc.yaml` | Planetary Computer only (8 products; no CDSE catalog or credentials) |
+| `default.yaml` | Planetary Computer + Copernicus Data Space (10 products) |
+| `s2_l2a_cop.yaml` | Sentinel-2 L2A from Copernicus Data Space only (1 product; requires CDSE credentials) |
+| `alphaearth.yaml`| Alphaearth Annual (1 product) |
 
 ## Usage
 
@@ -59,16 +60,14 @@ make setup BBOX=... DATETIME=...
 make index-serie
 make index TIME_INDEX=1 BBOX=... DATETIME=...
 
-# Planetary Computer only (no Copernicus / CDSE products)
-make setup INDEX_CONFIG=config/indexation/pc.yaml BBOX=... DATETIME=...
+# CDSE-only Sentinel-2 L2A (requires CDSE credentials)
+make setup INDEX_CONFIG=config/indexation/s2_l2a_cop.yaml BBOX=... DATETIME=...
 ```
 
 Pass `TIME_INDEX=1` to print per-product durations and total wall time at the end of indexing.
 
-Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` when indexing CDSE products (`default.yaml`). CLCplus is Europe-only — use a European `BBOX` for meaningful results. With `pc.yaml`, CDSE credentials are not required.
+Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` when indexing CDSE products (`default.yaml`, `s2_l2a_cop.yaml`). CLCplus is Europe-only — use a European `BBOX` for meaningful results. With `alphaearth.yaml`, CDSE credentials are not required.
 
 If a product fails (e.g. CDSE 504 or STAC API timeouts), the index script prints a short summary instead of a full Python traceback and **continues with the remaining products**; the overall run still exits non-zero if any required product failed. Retry failed products with `make index-serie` (`PARALLELISM=1`) or a one-product `INDEX_CONFIG`. This is a mitigation for server flakiness, not evidence of access limits.
 
 Switching `INDEX_CONFIG` on an existing database may replace a product definition with a different source; prefer a fresh setup when changing preset.
-
-With `pc.yaml`, demo notebooks that need CDSE products (notably `CLMS_CLCplus_Europe.ipynb`, and `Sentinel_2.ipynb` when using `s2_l2a_cdse`) will not have those products available — see [`shared/notebooks_demo/README.md`](../../shared/notebooks_demo/README.md).

@@ -1,0 +1,15 @@
+# Sentinel 2 L2A from Copernicus Data Space
+name: s2_l2a_cop
+parallelism: 1
+
+catalogs:
+  cdse:
+    href: https://stac.dataspace.copernicus.eu/v1/
+    auth: cdse_s3
+
+products:
+  - id: sentinel-2-l2a-cdse
+    catalog: cdse
+    collection: sentinel-2-l2a
+    product_file: products/cop/s2_l2a.odc-product.yaml
+    datetime: true

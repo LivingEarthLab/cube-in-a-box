@@ -13,16 +13,16 @@ catalogs:
     href: alphaearth
 
 products:
-  - id: sentinel-2-l2a-pc
+  - id: aef_annual
+    catalog: alphaearth
+    collection: aef_annual
+    product_file: products/aef/aef_annual.odc-product.yaml
+    datetime: true
+
+  - id: sentinel-2-l2a
     catalog: pc
     collection: sentinel-2-l2a
     product_file: products/pc/s2_l2a.odc-product.yaml
-    datetime: true
-
-  - id: sentinel-2-l2a-cdse
-    catalog: cdse
-    collection: sentinel-2-l2a
-    product_file: products/cop/s2_l2a.odc-product.yaml
     datetime: true
 
   - id: clms-clcplus-europe
@@ -74,9 +74,3 @@ products:
     collection: esa-worldcover
     product_file: products/pc/esa_worldcover.odc-product.yaml
     optional: true
-
-  - id: aef_annual
-    catalog: alphaearth
-    collection: aef_annual
-    product_file: products/aef/aef_annual.odc-product.yaml
-    datetime: true
