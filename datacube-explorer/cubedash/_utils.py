@@ -136,6 +136,45 @@ def datetime_expression(md_type: MetadataType):
     )
 
 
+def _collapse_shared_measurement_paths(paths: dict[str, str]) -> dict[str, str]:
+    """Collapse identical measurement paths into one Location row."""
+    if len(paths) <= 1:
+        return paths
+    unique = set(paths.values())
+    if len(unique) != 1:
+        return paths
+    names = sorted(paths)
+    label = f"{names[0]}–{names[-1]} ({len(names)} bands, single file)"
+    return {label: paths[names[0]]}
+
+
+def _apply_asset_proxy_rewrites(
+    uri_list: dict[str, str], dataset: Dataset
+) -> dict[str, str]:
+    """Route PC/CDSE assets through local Explorer proxy paths."""
+    out = dict(uri_list)
+
+    # Route Planetary Computer Azure blob assets through the local Explorer proxy
+    # (short-lived signed links; API redirects to a fresh SAS URL).
+    # Data API URLs (rendered_preview, tilejson, etc.) stay direct — they are public.
+    for name, path in list(out.items()):
+        if ".blob.core.windows.net" in path:
+            out[name] = pc_proxy_path(path)
+
+    # Route Copernicus (CDSE) eodata assets through the local Explorer proxy
+    # (short-lived signed links; signing secret is auto-generated in-process).
+    try:
+        base_uri = getattr(dataset, "location", None) or getattr(dataset, "uri", None) or ""
+        for name, path in out.items():
+            full = path if path.startswith("s3://") else urljoin(base_uri, path)
+            if extract_key(full):
+                out[name] = cdse_proxy_path(full)
+    except (AttributeError, KeyError, TypeError):
+        pass
+
+    return out
+
+
 def get_dataset_file_offsets(dataset: Dataset) -> dict[str, str]:
     """
     Get (usually relative) paths for all known files of a dataset.
@@ -143,40 +182,27 @@ def get_dataset_file_offsets(dataset: Dataset) -> dict[str, str]:
     Returns {name, url}
     """
 
-    # Get paths to measurements (usually relative, but may not be)
-    uri_list = {
+    measurement_paths = {
         name: m["path"] for name, m in dataset.measurements.items() if m.get("path")
     }
 
-    # Add accessories too, if possible
+    accessory_paths: dict[str, str] = {}
     if is_doc_eo3(dataset.metadata_doc):
         dataset_doc = serialise.from_doc(dataset.metadata_doc, skip_validation=True)
-        uri_list.update({name: a.path for name, a in dataset_doc.accessories.items()})
+        accessory_paths = {
+            name: a.path for name, a in dataset_doc.accessories.items()
+        }
 
     # Explorer map overlay looks for accessory key "thumbnail"; Planetary Computer
     # stores the preview under "rendered_preview" instead.
-    if "thumbnail" not in uri_list and "rendered_preview" in uri_list:
-        uri_list["thumbnail"] = uri_list["rendered_preview"]
+    if "thumbnail" not in accessory_paths and "rendered_preview" in accessory_paths:
+        accessory_paths["thumbnail"] = accessory_paths["rendered_preview"]
 
-    # Route Planetary Computer Azure blob assets through the local Explorer proxy
-    # (short-lived signed links; API redirects to a fresh SAS URL).
-    # Data API URLs (rendered_preview, tilejson, etc.) stay direct — they are public.
-    for name, path in list(uri_list.items()):
-        if ".blob.core.windows.net" in path:
-            uri_list[name] = pc_proxy_path(path)
+    measurement_paths = _apply_asset_proxy_rewrites(measurement_paths, dataset)
+    accessory_paths = _apply_asset_proxy_rewrites(accessory_paths, dataset)
+    measurement_paths = _collapse_shared_measurement_paths(measurement_paths)
 
-    # Route Copernicus (CDSE) eodata assets through the local Explorer proxy
-    # (short-lived signed links; signing secret is auto-generated in-process).
-    try:
-        base_uri = getattr(dataset, "location", None) or getattr(dataset, "uri", None) or ""
-        for name, path in uri_list.items():
-            full = path if path.startswith("s3://") else urljoin(base_uri, path)
-            if extract_key(full):
-                uri_list[name] = cdse_proxy_path(full)
-    except (AttributeError, KeyError, TypeError):
-        pass
-
-    return uri_list
+    return {**measurement_paths, **accessory_paths}
 
 
 def as_resolved_remote_url(location: str | None, offset: str) -> str:

@@ -178,7 +178,10 @@ ul.task-list li input[type="checkbox"] {
    
   <ul>
   <li><a href="#key-features" id="toc-key-features" class="nav-link active" data-scroll-target="#key-features"><span class="header-section-number">4.1</span> Key Features</a></li>
-  <li><a href="#how-to-browse-and-optionally-download-data" id="toc-how-to-browse-and-optionally-download-data" class="nav-link" data-scroll-target="#how-to-browse-and-optionally-download-data"><span class="header-section-number">4.2</span> How to browse and optionally download data</a></li>
+  <li><a href="#how-to-browse-and-optionally-download-data" id="toc-how-to-browse-and-optionally-download-data" class="nav-link" data-scroll-target="#how-to-browse-and-optionally-download-data"><span class="header-section-number">4.2</span> How to browse and optionally download data</a>
+  <ul class="collapse">
+  <li><a href="#location-downloads" id="toc-location-downloads" class="nav-link" data-scroll-target="#location-downloads"><span class="header-section-number">4.2.1</span> Location / downloads</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -221,9 +224,31 @@ ul.task-list li input[type="checkbox"] {
 <li><strong>Select a Product</strong>: Use the dropdown menu or the sidebar to choose a dataset (e.g., <code>s2_l2a</code> for Sentinel-2 from Planetary Computer).</li>
 <li><strong>Filter by Time</strong>: Use the timeline or calendar overview to find specific dates.</li>
 <li><strong>Inspect Metadata</strong>: Check the <code>DATASETS</code> option, and click on any geographic box to see the scene metadata.</li>
-<li><strong>Download Data</strong>: Click on the urls of the files (single-band GeoTIFFs) to download in the <code>Location</code> section.</li>
+<li><strong>Download Data</strong>: In the dataset view, open the <strong><code>Location</code></strong> section and click the URL on each row to download that file.</li>
 </ol>
+<section id="location-downloads" class="level3" data-number="4.2.1">
+<h3 data-number="4.2.1" class="anchored" data-anchor-id="location-downloads"><span class="header-section-number">4.2.1</span> Location / downloads</h3>
+<p>How Explorer lists download links depends on how the product stores its assets:</p>
+<ul>
+<li><strong>Multi-file products (e.g.&nbsp;Sentinel-2):</strong> one row per measurement or asset; each link is a separate file (often one band per GeoTIFF).</li>
+<li><strong>Single-file multi-band products (e.g.&nbsp;<code>aef_annual</code>):</strong> when every measurement shares the same path, Explorer shows <strong>one</strong> row with a band-range label (e.g.&nbsp;<code>A00–A63 (64 bands, single file)</code>) and a single URL. All bands live in one Cloud Optimized GeoTIFF (COG); clicking the link downloads the full file.</li>
+</ul>
+<p><strong>AlphaEarth (<code>aef_annual</code>)</strong> is served as unsigned HTTPS COGs from Source Cooperative (<code>us-west-2.opendata.source.coop</code>). Explorer links go direct to that URL—the same address notebooks read via GDAL <code>/vsicurl/</code>—with no Planetary Computer or CDSE proxy and no signing step.</p>
+<p>For <strong>Planetary Computer</strong> and <strong>Copernicus Data Space (CDSE)</strong> products, Explorer uses local download proxies instead:</p>
 <p>Planetary Computer Azure blob assets use Explorer’s local download proxy (<code>/explorer/api/pc/...</code> with short-lived signed links); the proxy redirects to a freshly SAS-signed blob URL. Public preview/Data API URLs stay direct. Copernicus Data Space (CDSE) assets are streamed through Explorer’s local download proxy (<code>/explorer/api/cdse/...</code>). CDSE downloads require the administrator to have set <code>CDSE_S3_ACCESS_KEY</code> / <code>CDSE_S3_SECRET_KEY</code> in <code>.env</code>.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Subsets vs full tiles
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Explorer download links always fetch the <strong>entire</strong> file behind that URL. For spatial or band subsets (especially multi-band COGs like AEF), prefer <code>dc.load</code> in a notebook—see <a href="../../shared/notebooks_demo/AlphaEarth_AEF_annual.ipynb"><code>AlphaEarth_AEF_annual.ipynb</code></a>.</p>
+</div>
+</div>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -239,6 +264,7 @@ ul.task-list li input[type="checkbox"] {
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

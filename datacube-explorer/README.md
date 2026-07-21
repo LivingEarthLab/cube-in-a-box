@@ -48,6 +48,7 @@ This directory contains patches to the standard Explorer codebase to support the
     -   **Planetary Computer Integration**: Rewrites `*.blob.core.windows.net` asset URLs to `/explorer/api/pc/...`; aliases `rendered_preview` to `thumbnail` for map overlays; leaves public Data API URLs unsigned.
     -   **CDSE Integration**: Rewrites CDSE `s3://eodata/...` asset URLs to the local `/explorer/api/cdse/...` proxy path.
     -   **Local URL Resolution**: Correctly resolves and redirects `file:///local_data/` paths to the `/api/data/` endpoint so they can be viewed in the browser.
+    -   **Shared-path Location dedup**: When every measurement on a dataset points at the same file (e.g. multi-band COGs such as AEF), the dataset Location table shows one download row with a band-range label instead of repeating the same URL per band. Accessories (e.g. thumbnails) are unchanged.
 3.  **`cubedash/templates/dataset.html`**: Embeds thumbnail URLs with Jinja `tojson` so Planetary Computer preview query strings keep `&` (HTML-escaping `&amp;` otherwise breaks the Data API).
 4.  **`pc_proxy.py`** (installed into the image as `pc_proxy`): Token mint/verify and path rewrite for Planetary Computer blob downloads.
 5.  **`shared/notebooks_demo/utils/le_cdse_s3.py`** (installed into the image as `cdse_s3`): Shared CDSE S3 helpers and proxy token mint/verify used by the patches above.

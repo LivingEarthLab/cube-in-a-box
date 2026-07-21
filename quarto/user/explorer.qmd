@@ -13,9 +13,25 @@ The **CiaB Explorer** is a visual web interface (`http://<DOMAIN>/explorer`) tha
 1. **Select a Product**: Use the dropdown menu or the sidebar to choose a dataset (e.g., `s2_l2a` for Sentinel-2 from Planetary Computer).
 2. **Filter by Time**: Use the timeline or calendar overview to find specific dates.
 3. **Inspect Metadata**: Check the `DATASETS` option, and click on any geographic box to see the scene metadata.
-4. **Download Data**: Click on the urls of the files (single-band GeoTIFFs) to download in the `Location` section.
+4. **Download Data**: In the dataset view, open the **`Location`** section and click the URL on each row to download that file.
+
+### Location / downloads
+
+How Explorer lists download links depends on how the product stores its assets:
+
+- **Multi-file products (e.g. Sentinel-2):** one row per measurement or asset; each link is a separate file (often one band per GeoTIFF).
+- **Single-file multi-band products (e.g. `aef_annual`):** when every measurement shares the same path, Explorer shows **one** row with a band-range label (e.g. `A00–A63 (64 bands, single file)`) and a single URL. All bands live in one Cloud Optimized GeoTIFF (COG); clicking the link downloads the full file.
+
+**AlphaEarth (`aef_annual`)** is served as unsigned HTTPS COGs from Source Cooperative (`us-west-2.opendata.source.coop`). Explorer links go direct to that URL—the same address notebooks read via GDAL `/vsicurl/`—with no Planetary Computer or CDSE proxy and no signing step.
+
+For **Planetary Computer** and **Copernicus Data Space (CDSE)** products, Explorer uses local download proxies instead:
 
 Planetary Computer Azure blob assets use Explorer’s local download proxy (`/explorer/api/pc/...` with short-lived signed links); the proxy redirects to a freshly SAS-signed blob URL. Public preview/Data API URLs stay direct. Copernicus Data Space (CDSE) assets are streamed through Explorer’s local download proxy (`/explorer/api/cdse/...`). CDSE downloads require the administrator to have set `CDSE_S3_ACCESS_KEY` / `CDSE_S3_SECRET_KEY` in `.env`.
+
+::: {.callout-tip}
+## Subsets vs full tiles
+Explorer download links always fetch the **entire** file behind that URL. For spatial or band subsets (especially multi-band COGs like AEF), prefer `dc.load` in a notebook—see [`AlphaEarth_AEF_annual.ipynb`](../../shared/notebooks_demo/AlphaEarth_AEF_annual.ipynb).
+:::
 
 ::: {.callout-tip}
 ## Tip
