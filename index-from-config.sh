@@ -297,8 +297,7 @@ sys.stdout.write("\0".join(str(job.get(f, "")) for f in fields))
       "--docs-dir=dataset_docs/aef"
     )
     local cmd
-    #cmd="$(printf '%q ' "${aef_args[@]}")"
-    cmd="pip install --quiet aef-loader && $(printf '%q ' "${aef_args[@]}")"
+    cmd="$(printf '%q ' "${aef_args[@]}")"
 
     log_line "$(date) Start processing: ${product_id} (config=${INDEX_CONFIG}, MODE=${MODE})"
     if [[ "${parallelism}" == "1" ]]; then
