@@ -223,7 +223,7 @@ ul.task-list li input[type="checkbox"] {
 <li><code>.env.default</code> / <code>.env</code>: Environment variables for system configuration.</li>
 <li><code>Dockerfile</code> / <code>docker-bake.hcl</code>: Definitions for building the Docker images.</li>
 <li><code>index-from-config.sh</code> / <code>product-from-config.sh</code>: Config-driven STAC indexing and ODC product registration.</li>
-<li><code>config/indexation/</code>: YAML preset for <code>INDEX_CONFIG</code> (<code>default.yaml</code>).</li>
+<li><code>config/indexation/</code>: YAML presets for <code>INDEX_CONFIG</code> (<code>default.yaml</code>, <code>s2_l2a_cop.yaml</code>, <code>alphaearth.yaml</code>).</li>
 <li><code>requirements.txt</code>: Python package dependencies for the Jupyter environment.</li>
 <li><code>distributed.yaml</code>: Configuration for distributed Dask processing.</li>
 </ul>
@@ -232,8 +232,8 @@ ul.task-list li input[type="checkbox"] {
 <li><code>data/</code>: Database storage, local files, and user workspaces.</li>
 <li><code>datacube-explorer/</code>: Web UI configuration and customization.</li>
 <li><code>hub/</code>: JupyterHub setup, authentication, and Docker spawner logic.</li>
-<li><code>config/indexation/</code>: STAC indexation preset (<code>default.yaml</code>, <code>INDEX_CONFIG</code>).</li>
-<li><code>config/products/</code>: ODC product YAMLs by source (<code>pc/</code>, <code>cop/</code>).</li>
+<li><code>config/indexation/</code>: STAC indexation presets (<code>default.yaml</code>, <code>s2_l2a_cop.yaml</code>, <code>alphaearth.yaml</code>; <code>INDEX_CONFIG</code>).</li>
+<li><code>config/products/</code>: ODC product YAMLs by source (<code>pc/</code>, <code>cop/</code>, <code>aef/</code>).</li>
 <li><code>quarto/</code>: Documentation source (including this manual).</li>
 <li><code>scripts/</code>: Data processing and system maintenance utilities.</li>
 <li><code>shared/</code>: Read-only templates and shared data for all JupyterHub users.</li>

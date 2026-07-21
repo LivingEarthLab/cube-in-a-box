@@ -7,7 +7,7 @@
 - `.env.default` / `.env`: Environment variables for system configuration.
 - `Dockerfile` / `docker-bake.hcl`: Definitions for building the Docker images.
 - `index-from-config.sh` / `product-from-config.sh`: Config-driven STAC indexing and ODC product registration.
-- `config/indexation/`: YAML preset for `INDEX_CONFIG` (`default.yaml`).
+- `config/indexation/`: YAML presets for `INDEX_CONFIG` (`default.yaml`, `s2_l2a_cop.yaml`, `alphaearth.yaml`).
 - `requirements.txt`: Python package dependencies for the Jupyter environment.
 - `distributed.yaml`: Configuration for distributed Dask processing.
 
@@ -16,8 +16,8 @@
 - `data/`: Database storage, local files, and user workspaces.
 - `datacube-explorer/`: Web UI configuration and customization.
 - `hub/`: JupyterHub setup, authentication, and Docker spawner logic.
-- `config/indexation/`: STAC indexation preset (`default.yaml`, `INDEX_CONFIG`).
-- `config/products/`: ODC product YAMLs by source (`pc/`, `cop/`).
+- `config/indexation/`: STAC indexation presets (`default.yaml`, `s2_l2a_cop.yaml`, `alphaearth.yaml`; `INDEX_CONFIG`).
+- `config/products/`: ODC product YAMLs by source (`pc/`, `cop/`, `aef/`).
 - `quarto/`: Documentation source (including this manual).
 - `scripts/`: Data processing and system maintenance utilities.
 - `shared/`: Read-only templates and shared data for all JupyterHub users.

@@ -46,11 +46,7 @@ Not every CiaB deployment indexes the same products. Before running a notebook, 
 These demos need Copernicus Data Space (CDSE) products and will not work if those were not indexed:
 
 - **[CLMS_CLCplus_Europe.ipynb](./CLMS_CLCplus_Europe.ipynb)** — needs `clms_clcplus_europe_100m`
-- **[Sentinel_2.ipynb](./Sentinel_2.ipynb)** — `s2_l2a_pc` is fine when present; `s2_l2a_cdse` only works if that product was indexed (keep `product = 's2_l2a_pc'` otherwise)
-
-This demo needs a non-CDSE product to be indexed (no CDSE credentials required):
-
-- **[AlphaEarth_AEF_annual.ipynb](./AlphaEarth_AEF_annual.ipynb)** — needs `aef_annual` (Source Cooperative, unsigned HTTPS COGs; no `patch_url`/credentials involved)
+- **[Sentinel_2.ipynb](./Sentinel_2.ipynb)** — `s2_l2a` is fine when present; `s2_l2a_cdse` only works if that product was indexed (keep `product = 's2_l2a'` otherwise)
 
 ## Quick Start
 

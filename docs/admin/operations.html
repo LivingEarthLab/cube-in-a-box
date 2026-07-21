@@ -436,7 +436,7 @@ Table&nbsp;6.1: <code>make</code> target reference
 <section id="stac-indexation-configs" class="level2" data-number="6.3">
 <h2 data-number="6.3" class="anchored" data-anchor-id="stac-indexation-configs"><span class="header-section-number">6.3</span> STAC indexation configs</h2>
 <p><code>make product</code> and <code>make index</code> both read the same <code>INDEX_CONFIG</code> YAML. Only products listed in that file are registered and indexed.</p>
-<p>Indexation presets live in <code>config/indexation/</code>. ODC product definitions live in <code>config/products/pc/</code> (Planetary Computer) and <code>config/products/cop/</code> (Copernicus CDSE), with <code>metadata.product.source</code> set in each YAML.</p>
+<p>Indexation presets live in <code>config/indexation/</code>. ODC product definitions live in <code>config/products/pc/</code> (Planetary Computer), <code>config/products/cop/</code> (Copernicus CDSE), and <code>config/products/aef/</code> (AlphaEarth), with <code>metadata.product.source</code> set in each YAML.</p>
 <p>List larger or slower products first in the <code>products</code> section of <code>INDEX_CONFIG</code> so parallel <code>make index</code> starts them before smaller ones (see <code>config/indexation/README.md</code>).</p>
 <table class="caption-top table">
 <colgroup>
@@ -454,8 +454,18 @@ Table&nbsp;6.1: <code>make</code> target reference
 <tbody>
 <tr class="odd">
 <td><code>default.yaml</code> (default)</td>
-<td>Planetary Computer + CDSE</td>
-<td>11 products: <code>s2_l2a_pc</code>, <code>s2_l2a_cdse</code>, CLCplus (CDSE); S1 RTC, Landsat, NASADEM, ESA WorldCover, ESRI land cover (PC)</td>
+<td>Planetary Computer + CDSE + AlphaEarth</td>
+<td>10 products: <code>aef_annual</code>, <code>s2_l2a</code> (PC), CLCplus (CDSE); S1 RTC, Landsat, NASADEM, ESA WorldCover, ESRI land cover (PC)</td>
+</tr>
+<tr class="even">
+<td><code>s2_l2a_cop.yaml</code></td>
+<td>CDSE</td>
+<td><code>s2_l2a_cdse</code></td>
+</tr>
+<tr class="odd">
+<td><code>alphaearth.yaml</code></td>
+<td>AlphaEarth</td>
+<td><code>aef_annual</code></td>
 </tr>
 </tbody>
 </table>

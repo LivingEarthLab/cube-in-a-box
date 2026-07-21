@@ -432,7 +432,7 @@ Table&nbsp;4.2: <code>make setup</code> parameters
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><code>config/indexation/default.yaml</code> indexes Sentinel-2 (<code>s2_l2a_cdse</code>) and CLCplus from <a href="https://stac.dataspace.copernicus.eu/v1/">Copernicus Data Space STAC</a>, plus Planetary Computer products (including <code>s2_l2a_pc</code>).</p>
+<p><code>config/indexation/default.yaml</code> indexes AlphaEarth (<code>aef_annual</code>), Sentinel-2 L2A from Planetary Computer (<code>s2_l2a</code>), and CLCplus from <a href="https://stac.dataspace.copernicus.eu/v1/">Copernicus Data Space STAC</a>, plus other Planetary Computer products. For CDSE-only Sentinel-2 (<code>s2_l2a_cdse</code>), use <code>config/indexation/s2_l2a_cop.yaml</code>.</p>
 <ul>
 <li><p>Set <code>CDSE_S3_ACCESS_KEY</code> and <code>CDSE_S3_SECRET_KEY</code> in <code>.env</code> (<a href="https://documentation.dataspace.copernicus.eu/APIs/S3.html">S3 credentials</a>). These keys are required for <strong>indexing</strong>, <strong>Explorer downloads</strong>, and <strong>notebook access</strong> to CDSE products. Explorer download links are signed automatically (no proxy secret to configure); notebooks read CDSE data directly via <code>s3://</code> and do not use that signing path.</p></li>
 <li><p><strong>S3 endpoint pinning:</strong> when <code>CDSE_S3_ACCESS_KEY</code>/<code>CDSE_S3_SECRET_KEY</code> are set, notebook and Explorer S3 access is pinned to the CDSE endpoint (<code>AWS_S3_ENDPOINT=eodata…</code>, <code>AWS_VIRTUAL_HOSTING=FALSE</code>). Generic <code>s3://</code> reads from other providers (e.g.&nbsp;AWS-hosted buckets) will not work in that configuration; Planetary Computer assets are unaffected (served over HTTPS with SAS tokens).</p></li>
@@ -460,7 +460,7 @@ Table&nbsp;4.2: <code>make setup</code> parameters
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p><code>make product</code> and <code>make index</code> both use <code>INDEX_CONFIG</code> (default: <code>config/indexation/default.yaml</code>). Only products referenced via <code>product_file</code> in that config are registered and indexed. Sentinel-2 L2A is split into <code>s2_l2a_pc</code> (Planetary Computer) and <code>s2_l2a_cdse</code> (CDSE); other ODC names are unchanged (<code>nasadem</code>, etc.). Source is recorded in each product YAML under <code>metadata.product.source</code>. List larger or slower products first in the config <code>products</code> list so parallel indexing starts them before smaller ones.</p>
+<p><code>make product</code> and <code>make index</code> both use <code>INDEX_CONFIG</code> (default: <code>config/indexation/default.yaml</code>). Only products referenced via <code>product_file</code> in that config are registered and indexed. The default preset uses <code>s2_l2a</code> (Planetary Computer); CDSE Sentinel-2 (<code>s2_l2a_cdse</code>) is available via <code>s2_l2a_cop.yaml</code>. Other ODC names are unchanged (<code>nasadem</code>, etc.). Source is recorded in each product YAML under <code>metadata.product.source</code>. List larger or slower products first in the config <code>products</code> list so parallel indexing starts them before smaller ones.</p>
 </div>
 </div>
 

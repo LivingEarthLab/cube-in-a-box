@@ -1,10 +1,10 @@
-name: s2_l2a_pc
+name: s2_l2a
 description: Sentinel-2a and Sentinel-2b imagery, processed to Level 2A (Surface Reflectance)
   and converted to Cloud Optimized GeoTIFFs
 metadata_type: eo3
 metadata:
   product:
-    name: s2_l2a_pc
+    name: s2_l2a
     source: planetary-computer
     stac_catalog: pc
 measurements:

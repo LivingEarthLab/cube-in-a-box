@@ -10,7 +10,7 @@ The **CiaB Explorer** is a visual web interface (`http://<DOMAIN>/explorer`) tha
 - **Download Data**: Download data.
 
 ## How to browse and optionally download data
-1. **Select a Product**: Use the dropdown menu or the sidebar to choose a dataset (e.g., `s2_l2a_pc` for Sentinel-2 from Planetary Computer).
+1. **Select a Product**: Use the dropdown menu or the sidebar to choose a dataset (e.g., `s2_l2a` for Sentinel-2 from Planetary Computer).
 2. **Filter by Time**: Use the timeline or calendar overview to find specific dates.
 3. **Inspect Metadata**: Check the `DATASETS` option, and click on any geographic box to see the scene metadata.
 4. **Download Data**: Click on the urls of the files (single-band GeoTIFFs) to download in the `Location` section.

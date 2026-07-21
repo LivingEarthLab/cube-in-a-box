@@ -64,7 +64,7 @@ This repository uses environment variables to configure the local domain, databa
 ::: {.callout-important}
 ## Copernicus Data Space products
 
-`config/indexation/default.yaml` indexes Sentinel-2 (`s2_l2a_cdse`) and CLCplus from [Copernicus Data Space STAC](https://stac.dataspace.copernicus.eu/v1/), plus Planetary Computer products (including `s2_l2a_pc`).
+`config/indexation/default.yaml` indexes AlphaEarth (`aef_annual`), Sentinel-2 L2A from Planetary Computer (`s2_l2a`), and CLCplus from [Copernicus Data Space STAC](https://stac.dataspace.copernicus.eu/v1/), plus other Planetary Computer products. For CDSE-only Sentinel-2 (`s2_l2a_cdse`), use `config/indexation/s2_l2a_cop.yaml`.
 
 - Set `CDSE_S3_ACCESS_KEY` and `CDSE_S3_SECRET_KEY` in `.env` ([S3 credentials](https://documentation.dataspace.copernicus.eu/APIs/S3.html)). These keys are required for **indexing**, **Explorer downloads**, and **notebook access** to CDSE products. Explorer download links are signed automatically (no proxy secret to configure); notebooks read CDSE data directly via `s3://` and do not use that signing path.
 - **S3 endpoint pinning:** when `CDSE_S3_ACCESS_KEY`/`CDSE_S3_SECRET_KEY` are set, notebook and Explorer S3 access is pinned to the CDSE endpoint (`AWS_S3_ENDPOINT=eodata…`, `AWS_VIRTUAL_HOSTING=FALSE`). Generic `s3://` reads from other providers (e.g. AWS-hosted buckets) will not work in that configuration; Planetary Computer assets are unaffected (served over HTTPS with SAS tokens).
@@ -89,5 +89,5 @@ This repository uses environment variables to configure the local domain, databa
 
 ::: {.callout-tip}
 ## Note
-`make product` and `make index` both use `INDEX_CONFIG` (default: `config/indexation/default.yaml`). Only products referenced via `product_file` in that config are registered and indexed. Sentinel-2 L2A is split into `s2_l2a_pc` (Planetary Computer) and `s2_l2a_cdse` (CDSE); other ODC names are unchanged (`nasadem`, etc.). Source is recorded in each product YAML under `metadata.product.source`. List larger or slower products first in the config `products` list so parallel indexing starts them before smaller ones.
+`make product` and `make index` both use `INDEX_CONFIG` (default: `config/indexation/default.yaml`). Only products referenced via `product_file` in that config are registered and indexed. The default preset uses `s2_l2a` (Planetary Computer); CDSE Sentinel-2 (`s2_l2a_cdse`) is available via `s2_l2a_cop.yaml`. Other ODC names are unchanged (`nasadem`, etc.). Source is recorded in each product YAML under `metadata.product.source`. List larger or slower products first in the config `products` list so parallel indexing starts them before smaller ones.
 :::

@@ -31,7 +31,7 @@ All the developments have made possible thanks to the financial support of the E
   - `shared/`: Read-only shared folder for all users.
 - `docs/`: Built documentation (Quarto).
 - `quarto/`: Source files for documentation.
-- `config/`: STAC indexation presets (`indexation/default.yaml`, `indexation/pc.yaml`) and ODC product definitions (`products/pc/`, `products/cop/`).
+- `config/`: STAC indexation presets (`indexation/default.yaml`, `indexation/s2_l2a_cop.yaml`, `indexation/alphaearth.yaml`) and ODC product definitions (`products/pc/`, `products/cop/`, `products/aef/`).
 
 ## How to use:
 
